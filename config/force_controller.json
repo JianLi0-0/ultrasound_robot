@@ -1,0 +1,27 @@
+{
+    "admittance_params": 
+    {
+        "mass":             [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "damping_scaling" : [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+        "stiffness":        [25.0, 25.0, 25.0, 10.0, 10.0, 10.0],
+        "wrench_scaling": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "static_target":  [0.55, -0.2, 0.0],
+        "static_target2":  [0.45, 0.2, 0.2],
+        "expected_wrench": [-0.0, 0.0, 0.0, 0, 0, 0]
+    },
+    "delta_t" : 0.005,
+    "adaptive_coefficient" : 0.1,
+    "robor_params":
+    {
+        "ft_link_2_end_effector":
+        {
+            "translation": [0, 0, 0.0],
+            "quaternion": [0.5, -0.5, 0.5, 0.5]
+        }
+    },
+    "ros_config":
+    {
+        "wrench_topic": "/wrench",
+        "real_robot_compensated_wrench_topic": "/ft_sensor/ft_compensated"
+    }
+}
