@@ -34,6 +34,9 @@ ForceTorqueController::ForceTorqueController(std::shared_ptr<SharedVariable> ptr
     Eigen::Map<Eigen::VectorXd> wrench_scaling_data(wrench_scaling.data(), 6);
     wrench_scaling_ = wrench_scaling_data.asDiagonal();
 
+    force_threshold = config_tree_.get<double>("admittance_params.ft_truncation.f", 1.5);
+    torque_threshold = config_tree_.get<double>("admittance_params.ft_truncation.t", 0.5);
+
     // stiffness_ = stiffness_ * 0;
     // std::cout << "Free Drive" << std::endl;
     adaptive_sigma = config_tree.get<double>("adaptive_coefficient", 0.0);
@@ -53,7 +56,7 @@ Eigen::VectorXd ForceTorqueController::AdmittanceVelocityController(const Eigen:
     // use task_frame_2_end_effector to calculate transformation error in task frame
     const Eigen::VectorXd pose_error = FromeMatrixToErrorAxisAngle(task_frame_2_end_effector); // pose_error = X-Xd
 
-    const Eigen::VectorXd ft_link_wrench = get_ft_link_wrench();
+    const Eigen::VectorXd ft_link_wrench = WrenchTruncation(get_ft_link_wrench(), force_threshold, torque_threshold);
     Eigen::Affine3d ft_link_2_task_frame = ft_link_2_end_effector_ * task_frame_2_end_effector.inverse(); // not done yet
     // transform the wrench from ft_link to the task frame: F_c = inv(Adjoint_bc.T) * F_b
     const Eigen::VectorXd task_frame_wrench = AdjointTransformationMatrix(ft_link_2_task_frame).transpose() * ft_link_wrench;
@@ -164,6 +167,33 @@ Eigen::Matrix3d ForceTorqueController::SkewSymmetricMatrix(const Eigen::Vector3d
                             vector(2),    0,               -1*vector(0), 
                             -1*vector(1), vector(0),      0;
     return skew_symmetric_matrix;
+}
+
+Eigen::VectorXd ForceTorqueController::WrenchTruncation(Eigen::VectorXd original_wrench, double force_threshold, double torque_threshold)
+{
+    assert(original_wrench.size() == 6);
+    Eigen::VectorXd truncated_wrench(6);
+    
+    for(int i=0;i<3;i++)
+    {
+        if(original_wrench(i)>force_threshold)
+            truncated_wrench(i) = original_wrench(i) - force_threshold;
+        else if(original_wrench(i)<-force_threshold)
+            truncated_wrench(i) = original_wrench(i) + force_threshold;
+        else
+            truncated_wrench(i) = 0.0;
+    }
+    for(int i=3;i<6;i++)
+    {
+        if(original_wrench(i)>torque_threshold)
+            truncated_wrench(i) = original_wrench(i) - torque_threshold;
+        else if(original_wrench(i)<-torque_threshold)
+            truncated_wrench(i) = original_wrench(i) + torque_threshold;
+        else
+            truncated_wrench(i) = 0.0;
+    }
+
+    return truncated_wrench;
 }
 
 Eigen::Affine3d ForceTorqueController::get_base_2_end_effector()

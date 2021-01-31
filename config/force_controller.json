@@ -7,7 +7,8 @@
         "wrench_scaling": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         "static_target":  [0.55, -0.2, 0.0],
         "static_target2":  [0.45, 0.2, 0.2],
-        "expected_wrench": [-0.0, 0.0, 0.0, 0, 0, 0]
+        "expected_wrench": [-0.0, 0.0, 0.0, 0, 0, 0],
+        "ft_truncation": {"f": 1.5, "t": 0.5}
     },
     "delta_t" : 0.005,
     "adaptive_coefficient" : 0.1,
