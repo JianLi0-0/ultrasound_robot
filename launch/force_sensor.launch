@@ -1,0 +1,10 @@
+<launch>
+<!-- by tunning the filter we can control the rate of the force sensor and make the signal smooth-->
+	<node
+		pkg="optoforce_etherdaq_driver"
+		type="etherdaq_node"
+		name="etherdaq_node"
+		args="--address 192.168.1.141 --rate 1000 --filter 4"
+	/>
+ 	<node pkg="tf" type="static_transform_publisher" name="force_sensor_broadcaster" args="0.05 0 0 -0.5 0.5 -0.5 0.5 ee_link ft_link 1000" /> 
+</launch>
