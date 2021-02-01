@@ -10,8 +10,10 @@
 
   <include file="$(find ur_modern_driver)/launch/ur5_ros_control.launch">
     <arg name="robot_ip" value="$(arg robot_ip)"/>
+    <!-- <arg name="controllers" default="joint_group_vel_controller joint_state_controller"/>
+    <arg name="stopped_controllers" default="vel_based_pos_traj_controller"/> -->
     <arg name="controllers" default="vel_based_pos_traj_controller joint_state_controller"/>
-    <arg name="stopped_controllers" default="joint_group_vel_controller "/>
+    <arg name="stopped_controllers" default="joint_group_vel_controller"/>
   </include>
 
   <include file="$(find ur5_moveit_config)/launch/move_group.launch">
@@ -19,10 +21,13 @@
   </include>
 
   <!-- <node pkg="rviz" type="rviz" name="rviz" />   -->
+  <include file="$(find ur5_e_moveit_config)/launch/moveit_rviz.launch">
+    <arg name="config" value="true"/>
+  </include>
 
-  <!-- <include file="$(find moveit_jog_arm)/launch/spacenav_cpp.launch" /> -->
+  <include file="$(find moveit_jog_arm)/launch/spacenav_cpp.launch" />
 
   <!--x y z qx qy qz qw--> 
-  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="-0.0449405149953 0.0282608492149 0.000449797438252 -0.510676353522 0.490219424807 -0.503089834938 0.49577736483 ee_link camera_link 100" />  
+  <!-- <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="-0.0449405149953 0.0282608492149 0.000449797438252 -0.510676353522 0.490219424807 -0.503089834938 0.49577736483 ee_link camera_link 100" />   -->
   
 </launch>
