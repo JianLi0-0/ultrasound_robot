@@ -17,9 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_ros_planning_interface
   tf
   dynamic_reconfigure
-  pcl_ros
-  pcl_conversions
   message_generation
+  control_msgs
 )
 find_package(Eigen3 REQUIRED)
 
@@ -49,6 +48,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${Eigen3_INCLUDE_DIRS}
 )
 
 add_executable(admittance_controller
@@ -65,29 +65,17 @@ target_link_libraries(admittance_controller
   ${catkin_LIBRARIES}
 )
 
-add_executable(wipe_blackboard
-  src/wipe_blackboard.cpp
-  src/StatesHub.cpp
-  src/ForceTorqueController.cpp
-  src/PointCloudCustomLib.cpp
-)
-add_dependencies(wipe_blackboard 
-  ${${PROJECT_NAME}_EXPORTED_TARGETS} 
-  ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(wipe_blackboard
-  ${catkin_LIBRARIES}
-)
-
-
-add_executable(pcl_normal_estimator
-  src/pcl_normal_estimator.cpp
-)
-add_dependencies(pcl_normal_estimator 
-  ${${PROJECT_NAME}_EXPORTED_TARGETS} 
-  ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(pcl_normal_estimator
-  ${catkin_LIBRARIES}
-)
-
+# add_executable(wipe_blackboard
+#   src/wipe_blackboard.cpp
+#   src/StatesHub.cpp
+#   src/ForceTorqueController.cpp
+#   src/PointCloudCustomLib.cpp
+# )
+# add_dependencies(wipe_blackboard 
+#   ${${PROJECT_NAME}_EXPORTED_TARGETS} 
+#   ${catkin_EXPORTED_TARGETS}
+# )
+# target_link_libraries(wipe_blackboard
+#   ${catkin_LIBRARIES}
+#   ${PCL_LIBRARIES}
+# )
