@@ -24,6 +24,8 @@ class ForceTorqueController
         double adaptive_sigma;
         double force_threshold;
         double torque_threshold;
+        double position_threshold;
+        double orientation_threshold;
         
     public:
         ForceTorqueController(std::shared_ptr<SharedVariable> ptr, const pt::ptree config_tree);
@@ -38,6 +40,7 @@ class ForceTorqueController
         Eigen::MatrixXd AdjointTransformationMatrix(const Eigen::Affine3d& transformation);
         Eigen::Matrix3d SkewSymmetricMatrix(const Eigen::Vector3d& vector);
         Eigen::VectorXd WrenchTruncation(Eigen::VectorXd original_wrench, double force_threshold, double torque_threshold);
+        Eigen::VectorXd PoseErrorEpsilon(Eigen::VectorXd original_vector, double position_threshold, double orientation_threshold);
 
         Eigen::Affine3d get_base_2_end_effector();
         Eigen::VectorXd get_ft_link_wrench();

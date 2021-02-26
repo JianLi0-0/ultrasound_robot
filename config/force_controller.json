@@ -1,13 +1,13 @@
 {
     "admittance_params": 
     {
-        "mass":             [3.0, 3.0, 3.0, 5.0, 5.0, 5.0],
-        "damping_scaling" : [6.0, 6.0, 6.0, 2.0, 2.0, 2.0],
-        "stiffness":        [35.0, 35.0, 35.0, 40.0, 40.0, 40.0],
-        "wrench_scaling": [1.0, 1.0, 1.0, 0.0, 0.0, 0.0],
+        "mass":             [1.0, 1.0, 1.0, 0.1, 0.1, 0.1],
+        "damping_scaling" : [2.0, 2.0, 2.0, 2.0, 2.0, 2.0],
+        "stiffness":        [10.0, 10.0, 10.0, 3.0, 3.0, 3.0],
+        "wrench_scaling": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         "static_target":  
         {
-            "translation":[0.435, -0.093, 0.093],
+            "translation":[0.435, -0.093, 0.17],
             "quaternion": [0.027, 0.696, 0.006, 0.717]
         },
         "static_target2":
@@ -15,7 +15,8 @@
             "translation":[0.360, -0.084, 0.194],
             "quaternion": [0.040, 0.672, 0.324, 0.665]
         },
-        "expected_wrench": [-5.5, 0.0, 0.0, 0, 0, 0],
+        "expected_wrench": [0, 0.0, 0.0, 0, 0, 0],
+        "pose_epsilon": {"p": 0.005, "o": 0.01},
         "ft_truncation": {"f": 3.3, "t": 0.5}
     },
     "delta_t" : 0.008,
