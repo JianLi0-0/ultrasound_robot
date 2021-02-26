@@ -66,9 +66,9 @@ int main(int argc, char **argv)
     while(ros::ok())
     {
         auto past = ros::Time::now();
-        while((ros::Time::now()-past).toSec() < 7.0)
+        while((ros::Time::now()-past).toSec() < 2.0)
         {
-            auto jonit_velocity = ft_controller.AdmittanceVelocityController(task_frame_pose, Eigen::VectorXd::Zero(6));
+            auto jonit_velocity = ft_controller.ForceVelocityController(task_frame_pose, Eigen::VectorXd::Zero(6));
             // auto jonit_velocity = ft_controller.ZeroMomentVelocityController();
             control_msgs::JointJog joint_deltas;
             for(int i = 0; i < 6; i++)
@@ -86,7 +86,12 @@ int main(int argc, char **argv)
         // task_frame_pose = task_frame_pose2;
         while(ros::ok())
         {
-            auto jonit_velocity = ft_controller.AdmittanceVelocityController(task_frame_pose, expected_wrench);
+            Eigen::VectorXd jonit_velocity;
+            if((ros::Time::now()-past).toSec() < 10.0)
+                jonit_velocity = ft_controller.ForceVelocityController(task_frame_pose, expected_wrench);
+            else
+                jonit_velocity = ft_controller.ForceVelocityController(task_frame_pose, Eigen::VectorXd::Zero(6));
+            
             // auto jonit_velocity = ft_controller.ZeroMomentVelocityController();
             control_msgs::JointJog joint_deltas;
             for(int i = 0; i < 6; i++)

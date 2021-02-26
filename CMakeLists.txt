@@ -19,6 +19,8 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
   message_generation
   control_msgs
+  pcl_ros
+  pcl_conversions
 )
 find_package(Eigen3 REQUIRED)
 
@@ -65,17 +67,16 @@ target_link_libraries(admittance_controller
   ${catkin_LIBRARIES}
 )
 
-# add_executable(wipe_blackboard
-#   src/wipe_blackboard.cpp
-#   src/StatesHub.cpp
-#   src/ForceTorqueController.cpp
-#   src/PointCloudCustomLib.cpp
-# )
-# add_dependencies(wipe_blackboard 
-#   ${${PROJECT_NAME}_EXPORTED_TARGETS} 
-#   ${catkin_EXPORTED_TARGETS}
-# )
-# target_link_libraries(wipe_blackboard
-#   ${catkin_LIBRARIES}
-#   ${PCL_LIBRARIES}
-# )
+add_executable(wipe_blackboard
+  src/wipe_blackboard.cpp
+  src/StatesHub.cpp
+  src/ForceTorqueController.cpp
+  src/PointCloudCustomLib.cpp
+)
+add_dependencies(wipe_blackboard 
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} 
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(wipe_blackboard
+  ${catkin_LIBRARIES}
+)

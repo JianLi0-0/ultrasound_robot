@@ -78,10 +78,6 @@ Eigen::VectorXd ForceTorqueController::AdmittanceVelocityController(const Eigen:
     const Eigen::VectorXd acceleration_task_frame = mass_inverse_ * 
                 ( wrench_scaling_*wrench_error - damping_*end_effector_velocity_task_frame - stiffness_*pose_error );
     const Eigen::VectorXd velocity_task_frame = end_effector_velocity_task_frame + acceleration_task_frame * delta_t_;
-    std::cout << "pose_error: " << std::endl << pose_error << std::endl;
-    std::cout << "wrench_error: " << std::endl << wrench_error << std::endl;
-    std::cout << "end_effector_velocity_task_frame: " << std::endl << end_effector_velocity_task_frame << std::endl << std::endl << std::endl;
-
 
     // transform the velocity from task frame to the base frame: V_b = inv(Adjoint_tb) * V_t
     const Eigen::VectorXd velocity_base_frame = AdjointTransformationMatrix(task_frame_2_base.inverse()) * velocity_task_frame;
@@ -89,6 +85,44 @@ Eigen::VectorXd ForceTorqueController::AdmittanceVelocityController(const Eigen:
 
     return velocity_joint_space;
 }
+
+Eigen::VectorXd ForceTorqueController::ForceVelocityController(const Eigen::Affine3d& base_2_task_frame, 
+                                                                    const Eigen::VectorXd& expected_wrench)
+{
+    const Eigen::Affine3d task_frame_2_base = base_2_task_frame.inverse();
+    const Eigen::Affine3d base_2_end_effector = get_base_2_end_effector();
+    const Eigen::Affine3d task_frame_2_end_effector = task_frame_2_base * base_2_end_effector;
+    // use task_frame_2_end_effector to calculate transformation error in task frame
+    Eigen::VectorXd pose_error = FromeMatrixToErrorAxisAngle(task_frame_2_end_effector); // pose_error = X-Xd
+    pose_error = PoseErrorEpsilon(pose_error, position_threshold, orientation_threshold);
+    
+
+    const Eigen::VectorXd original_wrench = get_ft_link_wrench();
+    const Eigen::VectorXd ft_link_wrench = WrenchTruncation(original_wrench, force_threshold, torque_threshold);
+    Eigen::Affine3d ft_link_2_task_frame = ft_link_2_end_effector_ * task_frame_2_end_effector.inverse(); // not done yet
+    // transform the wrench from ft_link to the task frame: F_c = inv(Adjoint_bc.T) * F_b
+    const Eigen::VectorXd task_frame_wrench = AdjointTransformationMatrix(ft_link_2_task_frame).transpose() * ft_link_wrench;
+    const Eigen::VectorXd wrench_error = task_frame_wrench - expected_wrench; // wrench_error = F-Fd
+
+    // apply admittance control law in task frame: X_dotdot = M^-1*( Kf(F-Fd)-Kd*X_dot-K(X-Xd) ) 
+    const auto jacobian = get_jacobian();
+    // const auto joint_velocity = get_joint_velocity();
+    const auto joint_velocity = PoseErrorEpsilon(get_joint_velocity(), 0.001, 0.001);
+    const Eigen::VectorXd end_effector_velocity = jacobian * joint_velocity;
+    Eigen::VectorXd end_effector_velocity_task_frame = AdjointTransformationMatrix(task_frame_2_base) * end_effector_velocity;
+    end_effector_velocity_task_frame = PoseErrorEpsilon(end_effector_velocity_task_frame, 0.005, 0.005);
+    // const Eigen::VectorXd acceleration_task_frame = mass_inverse_ * 
+    //             ( wrench_scaling_*wrench_error - damping_*end_effector_velocity_task_frame - stiffness_*pose_error );
+    // const Eigen::VectorXd velocity_task_frame = end_effector_velocity_task_frame + acceleration_task_frame * delta_t_;
+    const Eigen::VectorXd velocity_task_frame = wrench_scaling_*wrench_error - stiffness_*pose_error;
+
+    // transform the velocity from task frame to the base frame: V_b = inv(Adjoint_tb) * V_t
+    const Eigen::VectorXd velocity_base_frame = AdjointTransformationMatrix(task_frame_2_base.inverse()) * velocity_task_frame;
+    const Eigen::VectorXd velocity_joint_space = jacobian.inverse() * velocity_base_frame;
+
+    return velocity_joint_space;
+}
+
 
 Eigen::VectorXd ForceTorqueController::AdmittancePositionController(const Eigen::Affine3d& base_2_task_frame, 
                                                 const Eigen::VectorXd& expected_wrench)
