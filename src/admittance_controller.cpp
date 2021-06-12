@@ -16,7 +16,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
     std::shared_ptr<SharedVariable> shared_variable_ptr = std::make_shared<SharedVariable>();
     pt::ptree root;
-	pt::read_json("/home/sunlab/Desktop/lee_ws/src/ultrasound_robot/config/force_controller.json", root);
+	pt::read_json("src/ultrasound_robot/config/force_controller.json", root);
     ForceTorqueController ft_controller(shared_variable_ptr, root);
     shared_variable_ptr->config_tree = root;
     ros::Rate loop_rate( int(1.0/root.get<double>("delta_t", 0.005)) );
