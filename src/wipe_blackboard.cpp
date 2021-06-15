@@ -70,6 +70,7 @@ void WipeBlackboard::PublishPoseArray(const pcl::PointCloud<pcl::PointXYZ>::Ptr 
 
 bool WipeBlackboard::WipeBlackboardServiceCallback(ultrasound_robot::wipe_bb::Request  &req, ultrasound_robot::wipe_bb::Response &res)
 {
+    cout << "WipeBlackboard::WipeBlackboardServiceCallback" << endl;
     pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     auto pointcloud = cloud_;
     pccl_.EstimatePointcloudNormals(pointcloud, normals);
@@ -81,22 +82,23 @@ bool WipeBlackboard::WipeBlackboardServiceCallback(ultrasound_robot::wipe_bb::Re
 void WipeBlackboard::MainLoop()
 {
     ros::Rate loop_rate( int(1.0/config_tree_.get<double>("delta_t", 0.005)) );
-    Eigen::Affine3d base_2_task_frame;
-    base_2_task_frame.setIdentity();
-    auto translation = AsVector<double>(config_tree_, "admittance_params.static_target");
-    base_2_task_frame.translate( Eigen::Vector3d(translation.data()) );
-    // base_2_task_frame.rotate(Eigen::AngleAxisd(0.5*M_PI, Eigen::Vector3d::UnitY()));
+
+    auto translation = AsVector<double>(config_tree_, "admittance_params.static_target.translation");
+    auto quaternion = AsVector<double>(config_tree_, "admittance_params.static_target.quaternion");
+    Eigen::Affine3d task_frame_pose;
+    task_frame_pose.setIdentity();
+    task_frame_pose.translate( Eigen::Vector3d(translation.data()) );
+    task_frame_pose.rotate( Eigen::Quaterniond(quaternion.data()) );
+
     auto expected_wrench_data = AsVector<double>(config_tree_, "admittance_params.expected_wrench");
     Eigen::Map<Eigen::VectorXd> expected_wrench(expected_wrench_data.data(), 6);
+    cout << "start force control ..." << endl;
     while (ros::ok())
     {
-        // auto velocity = force_controller_ ->AdaptiveForceVelocityController(base_2_task_frame, expected_wrench);
-        auto velocity = force_controller_ ->ZeroMomentVelocityController();
-
+        auto jonit_velocity = force_controller_->ForceVelocityController(task_frame_pose, Eigen::VectorXd::Zero(6));
         std_msgs::Float64MultiArray velocity_msg;
-        for(int i=0;i<velocity.size();i++)
-            velocity_msg.data.push_back(velocity(i));
-
+        for(int i=0;i<jonit_velocity.size();i++)
+            velocity_msg.data.push_back(jonit_velocity(i));
         vel_pub_.publish(velocity_msg);
         loop_rate.sleep();
     }
@@ -124,7 +126,8 @@ int main(int argc, char **argv)
     std::thread states_hub_thread(start_states_hub_thread, shared_variable_ptr);
     sleep(1);
 
-    wipe_blackboard.MainLoop();
+    // wipe_blackboard.MainLoop();
+    ros::waitForShutdown();
 
     states_hub_thread.join();
 
