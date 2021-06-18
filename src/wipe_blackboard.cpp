@@ -37,6 +37,9 @@ class WipeBlackboard
         void PublishPoseArray(const pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud);
         bool WipeBlackboardServiceCallback(ultrasound_robot::wipe_bb::Request  &req, ultrasound_robot::wipe_bb::Response &res);
         void MainLoop();
+        void InitializeRobot(double x, double y, double z);
+        void KeepStatic(double x, double y, double z);
+
 };
 
 WipeBlackboard::WipeBlackboard(std::shared_ptr<SharedVariable> ptr, const pt::ptree config_tree):
@@ -48,7 +51,7 @@ WipeBlackboard::WipeBlackboard(std::shared_ptr<SharedVariable> ptr, const pt::pt
     pointcloud_pub_ = nh_.advertise<pcl::PointCloud<pcl::PointXYZ> > ("/pointcloud", 1);
     pose_array_pub_ = nh_.advertise<geometry_msgs::PoseArray>("/normal_vectors", 1);
     wipe_blackboard_service_ = nh_.advertiseService("wipe_blackboard_service", &WipeBlackboard::WipeBlackboardServiceCallback, this);
-    vel_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/joint_group_vel_controller/command", 1);
+    // vel_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/joint_group_vel_controller/command", 1);
 
     force_controller_ = new ForceTorqueController(shared_variable_ptr_, config_tree_);
 }
@@ -71,12 +74,33 @@ void WipeBlackboard::PublishPoseArray(const pcl::PointCloud<pcl::PointXYZ>::Ptr 
 bool WipeBlackboard::WipeBlackboardServiceCallback(ultrasound_robot::wipe_bb::Request  &req, ultrasound_robot::wipe_bb::Response &res)
 {
     cout << "WipeBlackboard::WipeBlackboardServiceCallback" << endl;
-    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
-    auto pointcloud = cloud_;
-    pccl_.EstimatePointcloudNormals(pointcloud, normals);
-    auto pose_array = pccl_.FromNormalsToPoseArray(req.waypoints, pointcloud, normals);
-    pose_array_pub_.publish(pose_array);
-    return true;
+    try
+    {
+        pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+        auto pointcloud = cloud_;
+        pccl_.EstimatePointcloudNormals(pointcloud, normals);
+        auto pose_array = pccl_.FromNormalsToPoseArray(req.waypoints, pointcloud, normals);
+        pose_array_pub_.publish(pose_array);
+
+        cout << "Press e to proceed." << endl;
+        char proceed;
+        cin >> proceed;
+        if(proceed!='e') throw("Interrupt ");
+
+        res.is_successful = force_controller_->MultiplePointsControl(pose_array);
+        cout << "WipeBlackboard successful: " << res.is_successful << endl;
+        InitializeRobot(-0.46716, 0.0, 0.08);
+        InitializeRobot(-0.46716, 0.0, 0.15);
+    }
+    catch(const char* msg)
+    {
+        cerr << msg << endl;
+        cout << "Terminate the service" << endl;
+        res.is_successful = false;
+        return false;
+    }
+
+    return res.is_successful;
 }
 
 void WipeBlackboard::MainLoop()
@@ -99,12 +123,30 @@ void WipeBlackboard::MainLoop()
         std_msgs::Float64MultiArray velocity_msg;
         for(int i=0;i<jonit_velocity.size();i++)
             velocity_msg.data.push_back(jonit_velocity(i));
-        vel_pub_.publish(velocity_msg);
+
         loop_rate.sleep();
     }
     
     delete(force_controller_);
     // ros::waitForShutdown();
+}
+
+void WipeBlackboard::InitializeRobot(double x, double y, double z)
+{
+    Eigen::Affine3d no_rotation;
+    no_rotation.setIdentity();
+    no_rotation.translate( Eigen::Vector3d(x, y, z) );
+    force_controller_->StaticPointControl(no_rotation, Eigen::VectorXd::Zero(6), true);
+    force_controller_->SetZeroVelocity();
+}
+
+void WipeBlackboard::KeepStatic(double x, double y, double z)
+{
+    Eigen::Affine3d no_rotation;
+    no_rotation.setIdentity();
+    no_rotation.translate( Eigen::Vector3d(x, y, z) );
+    cout << "Stay at pose: " << endl << no_rotation.matrix() << endl;
+    force_controller_->StaticPointControl(no_rotation, Eigen::VectorXd::Zero(6), false);
 }
 
 int main(int argc, char **argv)
@@ -113,7 +155,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
     
     pt::ptree root;
-	pt::read_json("src/ultrasound_robot/config/force_controller.json", root);
+	pt::read_json("/home/ur5e/lee_ws/src/ultrasound_robot/config/force_controller.json", root);
     
     std::shared_ptr<SharedVariable> shared_variable_ptr = std::make_shared<SharedVariable>();
     shared_variable_ptr->config_tree = root;
@@ -127,6 +169,9 @@ int main(int argc, char **argv)
     sleep(1);
 
     // wipe_blackboard.MainLoop();
+    wipe_blackboard.InitializeRobot(-0.46716, 0.0, 0.15);
+    // wipe_blackboard.KeepStatic(-0.46716, 0.0, 0.15);
+    // wipe_blackboard.KeepStatic(-0.36716, 0.14722, 0.02);
     ros::waitForShutdown();
 
     states_hub_thread.join();

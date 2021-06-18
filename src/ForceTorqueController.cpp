@@ -43,6 +43,10 @@ ForceTorqueController::ForceTorqueController(std::shared_ptr<SharedVariable> ptr
     // stiffness_ = stiffness_ * 0;
     // std::cout << "Free Drive" << std::endl;
     adaptive_sigma = config_tree.get<double>("adaptive_coefficient", 0.0);
+
+
+    vel_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/joint_group_vel_controller/command", 1);
+    jog_vel_pub = nh_.advertise<control_msgs::JointJog>("/jog_arm_server/joint_delta_jog_cmds", 1);
 }
 
 ForceTorqueController::~ForceTorqueController()
@@ -93,8 +97,8 @@ Eigen::VectorXd ForceTorqueController::ForceVelocityController(const Eigen::Affi
     const Eigen::Affine3d base_2_end_effector = get_base_2_end_effector();
     const Eigen::Affine3d task_frame_2_end_effector = task_frame_2_base * base_2_end_effector;
     // use task_frame_2_end_effector to calculate transformation error in task frame
-    Eigen::VectorXd pose_error = FromeMatrixToErrorAxisAngle(task_frame_2_end_effector); // pose_error = X-Xd
-    pose_error = PoseErrorEpsilon(pose_error, position_threshold, orientation_threshold);
+    pose_error_ = FromeMatrixToErrorAxisAngle(task_frame_2_end_effector); // pose_error = X-Xd
+    Eigen::VectorXd pose_error = PoseErrorEpsilon(pose_error_, position_threshold, orientation_threshold);
     
 
     const Eigen::VectorXd original_wrench = get_ft_link_wrench();
@@ -119,6 +123,13 @@ Eigen::VectorXd ForceTorqueController::ForceVelocityController(const Eigen::Affi
     // transform the velocity from task frame to the base frame: V_b = inv(Adjoint_tb) * V_t
     const Eigen::VectorXd velocity_base_frame = AdjointTransformationMatrix(task_frame_2_base.inverse()) * velocity_task_frame;
     const Eigen::VectorXd velocity_joint_space = jacobian.inverse() * velocity_base_frame;
+
+    // cout << "original_wrench: " << endl << original_wrench << endl;
+    // cout << "truncated_link_wrench: " << endl << ft_link_wrench << endl;
+    // cout << "task_frame_wrench: " << endl << task_frame_wrench << endl;
+    // cout << "end_effector_velocity_task_frame: " << endl << end_effector_velocity_task_frame << endl;
+    // cout << "velocity_base_frame: " << endl << velocity_base_frame << endl;
+
 
     return velocity_joint_space;
 }
@@ -298,4 +309,116 @@ Eigen::VectorXd ForceTorqueController::get_joint_states()
     const Eigen::VectorXd joint_states = shared_variable_ptr_->joint_states;
     pthread_rwlock_unlock(&shared_variable_ptr_->shared_variables_rwlock);
     return joint_states;
+}
+
+bool ForceTorqueController::StaticPointControl(const Eigen::Affine3d task_frame_pose, const Eigen::VectorXd& expected_wrench, bool keep_moving)
+{
+    cout << "Going to pose: " << endl << task_frame_pose.matrix() << endl;
+    const double control_tol = config_tree_.get<double>("control_tol", 0.01);
+    ros::Rate loop_rate( int(1.0/config_tree_.get<double>("delta_t", 0.008)) );
+    vector<string> str_name = shared_variable_ptr_->joint_names;
+    while (ros::ok())
+    {
+        auto jonit_velocity = ForceVelocityController(task_frame_pose, expected_wrench);
+        control_msgs::JointJog joint_deltas;
+        for(int i=0;i<jonit_velocity.size();i++)
+        {
+            joint_deltas.joint_names.push_back(str_name[i]);
+            joint_deltas.velocities.push_back(jonit_velocity(i));
+        }
+        joint_deltas.header.stamp = ros::Time::now();
+        jog_vel_pub.publish(joint_deltas);
+        loop_rate.sleep();
+
+        if(pose_error_.norm() < control_tol && keep_moving == true) break;
+    }
+    return true;
+}
+
+bool ForceTorqueController::MultiplePointsControl(geometry_msgs::PoseArray cam_to_task_frame_pose_array)
+{
+    auto expected_wrench_data = AsVector<double>(config_tree_, "admittance_params.expected_wrench");
+    Eigen::Map<Eigen::VectorXd> expected_wrench(expected_wrench_data.data(), 6);
+
+    tf::StampedTransform transform1, transform2;
+    static tf::TransformListener listener(ros::Duration(5));
+    listener.waitForTransform("base_link", "wrist_3_link", ros::Time(0), ros::Duration(3.0));
+    listener.lookupTransform("base_link", "wrist_3_link", ros::Time(0), transform1);
+    listener.waitForTransform("wrist_3_link", "camera_color_frame", ros::Time(0), ros::Duration(3.0));
+    listener.lookupTransform("wrist_3_link", "camera_color_frame", ros::Time(0), transform2);
+    auto transform = transform1 * transform2;
+
+    Eigen::Affine3d base_2_camera;
+    base_2_camera.setIdentity();
+    base_2_camera.translate( Eigen::Vector3d(transform.getOrigin().getX(), transform.getOrigin().getY(), transform.getOrigin().getZ()) );
+    base_2_camera.rotate( Eigen::Quaterniond(transform.getRotation().getW(), transform.getRotation().getX(), transform.getRotation().getY(), transform.getRotation().getZ()) );
+
+    
+
+    for(auto cam_to_task_frame_pose:cam_to_task_frame_pose_array.poses)
+    {
+        Eigen::Affine3d eigen_cam_to_task_frame;
+        eigen_cam_to_task_frame.setIdentity();
+        eigen_cam_to_task_frame.translate( Eigen::Vector3d(cam_to_task_frame_pose.position.x, cam_to_task_frame_pose.position.y, cam_to_task_frame_pose.position.z) );
+        eigen_cam_to_task_frame.rotate( Eigen::Quaterniond(cam_to_task_frame_pose.orientation.w, cam_to_task_frame_pose.orientation.x, cam_to_task_frame_pose.orientation.y, cam_to_task_frame_pose.orientation.z) );
+        auto task_frame_pose = base_2_camera * eigen_cam_to_task_frame;
+        // cout << "base2cam2:" << endl << base_2_camera.matrix() << endl;
+        // cout << "eigen_cam_to_task_frame:" << endl << eigen_cam_to_task_frame.matrix() << endl;
+        // cout << "task_frame_pose: " << endl << task_frame_pose.matrix() << endl;
+        Eigen::Affine3d no_rotation;
+        no_rotation.setIdentity();
+        no_rotation.translate(task_frame_pose.translation());
+        no_rotation.translate(Eigen::Vector3d(0, 0, 0.01));
+        cout << "haha task_frame_pose" << endl <<  task_frame_pose.matrix() << endl; 
+        cout << "haha no_rotation" << endl <<  no_rotation.matrix() << endl; 
+        StaticPointControl(no_rotation, Eigen::VectorXd::Zero(6), true);
+        break;
+    }
+    
+    SetZeroVelocity();
+
+    cout << "Press e to proceed." << endl;
+    char proceed;
+    cin >> proceed;
+    if(proceed!='e') throw("Start point not suitable ");
+
+    for(auto cam_to_task_frame_pose:cam_to_task_frame_pose_array.poses)
+    {
+        Eigen::Affine3d eigen_cam_to_task_frame;
+        eigen_cam_to_task_frame.setIdentity();
+        eigen_cam_to_task_frame.translate( Eigen::Vector3d(cam_to_task_frame_pose.position.x, cam_to_task_frame_pose.position.y, cam_to_task_frame_pose.position.z) );
+        eigen_cam_to_task_frame.rotate( Eigen::Quaterniond(cam_to_task_frame_pose.orientation.w, cam_to_task_frame_pose.orientation.x, cam_to_task_frame_pose.orientation.y, cam_to_task_frame_pose.orientation.z) );
+        auto task_frame_pose = base_2_camera * eigen_cam_to_task_frame;
+        // cout << "base2cam2:" << endl << base_2_camera.matrix() << endl;
+        // cout << "eigen_cam_to_task_frame:" << endl << eigen_cam_to_task_frame.matrix() << endl;
+        // cout << "task_frame_pose: " << endl << task_frame_pose.matrix() << endl;
+        Eigen::Affine3d no_rotation;
+        no_rotation.setIdentity();
+        no_rotation.translate(task_frame_pose.translation());
+        // StaticPointControl(task_frame_pose);
+        StaticPointControl(no_rotation, expected_wrench, true);
+    }
+
+    SetZeroVelocity();
+
+    return true;
+}
+
+void ForceTorqueController::SetZeroVelocity()
+{
+    vector<string> str_name = shared_variable_ptr_->joint_names;
+    ros::Rate loop_rate(100);
+    for(int i=0;i<20;i++)
+    {
+        control_msgs::JointJog joint_deltas;
+        for(int i=0;i<6;i++)
+        {
+            joint_deltas.joint_names.push_back(str_name[i]);
+            joint_deltas.velocities.push_back(0.0);
+        }
+        joint_deltas.header.stamp = ros::Time::now();
+        jog_vel_pub.publish(joint_deltas);
+        loop_rate.sleep();
+    }
+    cout << "SetZeroVelocity()" << endl;
 }

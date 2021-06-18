@@ -5,6 +5,13 @@
 #include <Eigen/Eigen>
 #include "SharedVariable.h"
 #include "utils/utils.hpp"
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseArray.h>
+#include <std_msgs/Float64MultiArray.h>
+#include "StatesHub.h"
+#include <tf/transform_listener.h>
+#include <control_msgs/JointJog.h>
+
 
 using namespace std;
 namespace pt = boost::property_tree;
@@ -26,6 +33,13 @@ class ForceTorqueController
         double torque_threshold;
         double position_threshold;
         double orientation_threshold;
+
+        ros::NodeHandle nh_;
+        ros::Publisher vel_pub_;
+        ros::Publisher jog_vel_pub;
+        Eigen::VectorXd pose_error_;
+
+        
         
     public:
         ForceTorqueController(std::shared_ptr<SharedVariable> ptr, const pt::ptree config_tree);
@@ -48,6 +62,10 @@ class ForceTorqueController
         Eigen::MatrixXd get_jacobian();
         Eigen::VectorXd get_joint_velocity();
         Eigen::VectorXd get_joint_states();
+
+        bool StaticPointControl(const Eigen::Affine3d task_frame_pose, const Eigen::VectorXd& expected_wrench, bool keep_moving);
+        bool MultiplePointsControl(geometry_msgs::PoseArray task_frame_pose_array);
+        void SetZeroVelocity();
 
 
 };
