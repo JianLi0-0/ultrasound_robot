@@ -43,7 +43,8 @@ geometry_msgs::PoseArray PointCloudCustomLib::FromNormalsToPoseArray(const geome
                                     const pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud, const pcl::PointCloud<pcl::Normal>::Ptr normals)
 {
     geometry_msgs::PoseArray pose_array;
-    pose_array.header.frame_id = pointcloud->header.frame_id;
+    // pose_array.header.frame_id = pointcloud->header.frame_id;
+    pose_array.header.frame_id = "camera_color_frame";
     // std::cout << pose_array.header.frame_id << std::endl;
     // estimatePointcloudNormals(pointcloud, normals);
     for(int i=0;i<pixel_points.poses.size();i++)
