@@ -1,0 +1,3 @@
+<launch>
+ 	<node pkg="ultrasound_robot" type="wipe_blackboard" name="launch_debug_node" /> 
+</launch>
