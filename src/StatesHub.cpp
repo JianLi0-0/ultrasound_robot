@@ -15,7 +15,8 @@ StatesHub::StatesHub(std::shared_ptr<SharedVariable> ptr)
     joint_model_group_ = kinematic_model_->getJointModelGroup("manipulator");
     shared_variable_ptr_->joint_names = joint_model_group_->getVariableNames();
 
-
+    Eigen::VectorXd force_torque(6);
+    shared_variable_ptr_->wrench = force_torque;
 }
 
 StatesHub::~StatesHub()
