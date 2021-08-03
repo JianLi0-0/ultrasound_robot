@@ -21,6 +21,8 @@ find_package(catkin REQUIRED COMPONENTS
   control_msgs
   pcl_ros
   pcl_conversions
+  trajectory_msgs
+  trac_ik_lib
 )
 find_package(Eigen3 REQUIRED)
 
@@ -78,5 +80,19 @@ add_dependencies(wipe_blackboard
   ${catkin_EXPORTED_TARGETS}
 )
 target_link_libraries(wipe_blackboard
+  ${catkin_LIBRARIES}
+)
+
+add_executable(us_image_acquisition
+  src/us_image_acquisition.cpp
+  src/StatesHub.cpp
+  src/ForceTorqueController.cpp
+  src/CustomRosLib.cpp
+)
+add_dependencies(us_image_acquisition 
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} 
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(us_image_acquisition
   ${catkin_LIBRARIES}
 )
