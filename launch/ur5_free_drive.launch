@@ -1,0 +1,28 @@
+<launch>
+
+<arg name="robot_ip" default="192.168.1.75" />
+<arg name="limited" default="true" />
+
+  <include file="$(find ur_modern_driver)/launch/ur5_ros_control.launch">
+    <arg name="robot_ip" value="$(arg robot_ip)"/>
+    <arg name="controllers" default="joint_state_controller"/>
+    <arg name="stopped_controllers" default="joint_group_vel_controller pos_based_pos_traj_controller"/>
+  </include>
+
+  <include file="$(find ur5_moveit_config)/launch/move_group.launch">
+    <arg name="limited" value="$(arg limited)"/>
+  </include>
+
+  <!-- <node pkg="rviz" type="rviz" name="rviz" />   -->
+  <include file="$(find ur5_e_moveit_config)/launch/moveit_rviz.launch">
+    <arg name="config" value="true"/>
+  </include>
+
+  <node
+		pkg="ultrasound_robot"
+		type="ur_free_drive.py"
+		name="ur_free_drive"
+    output="screen"
+	/>
+
+</launch>
