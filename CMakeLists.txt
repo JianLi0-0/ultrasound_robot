@@ -24,7 +24,16 @@ find_package(catkin REQUIRED COMPONENTS
   trajectory_msgs
   trac_ik_lib
 )
-find_package(Eigen3 REQUIRED)
+# find_package(Eigen3 REQUIRED)
+
+
+SET(ITK_DIR "/home/sunlab/Desktop/SVR/ITK/build")
+find_package(ITK REQUIRED)
+include(${ITK_USE_FILE})
+include_directories( include/svr/optim )
+include_directories( include/svr/itk_img )
+include_directories( include/svr/optimization )
+include_directories( /home/sunlab/Desktop/SVR/eigen )
 
 generate_dynamic_reconfigure_options(
   cfg/force_controller.cfg
@@ -96,3 +105,10 @@ add_dependencies(us_image_acquisition
 target_link_libraries(us_image_acquisition
   ${catkin_LIBRARIES}
 )
+
+add_executable(HelloInsight 
+  src/svr/HelloInsight.cpp 
+  src/svr/ITKImgProcess.cpp 
+  src/svr/Optimization.cpp
+)
+target_link_libraries(HelloInsight ${ITK_LIBRARIES})
