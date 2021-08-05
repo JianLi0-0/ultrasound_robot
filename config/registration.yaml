@@ -1,0 +1,13 @@
+initial_pose: [1.1, -3.1, 4.1, -0.1, 0.1, 0.1]
+frame_id: probe
+
+# Strating point of the ultrasound image
+x: 560
+y: 90
+# Size of the ultrasound image for visual servo
+w: 300
+h: 657
+
+# Size of the ultrasound image for reconstruction
+reconstruction_w: 657
+reconstruction_h: 869
