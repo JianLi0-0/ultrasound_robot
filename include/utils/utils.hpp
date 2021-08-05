@@ -14,26 +14,24 @@ std::vector<T> AsVector(boost::property_tree::ptree const & ptIn, boost::propert
   return r;
 }
 
-// inline Eigen::VectorXd & quatVector(const Eigen::Quaterniond & input)
-// {
-//   Eigen::VectorXd output(4);
-//   output(0) = input.w();
-//   output(1) = input.x();
-//   output(2) = input.y();
-//   output(3) = input.z();
-//   return output;
-// }
-
-// inline Eigen::Quaterniond & vecQuat(const Eigen::VectorXd & input)
-// {
-
-//   Eigen::Quaterniond output;
-//   output.w() = input(0);
-//   output.x() = input(1);
-//   output.y() = input(2);
-//   output.z() = input(3);
-
-//   return output;
-// }
+class CustomTimer
+{
+	public:
+    	CustomTimer(){};
+    	~CustomTimer(){};
+		void tic()
+		{
+			start = std::chrono::system_clock::now();
+		}
+		std::chrono::duration<double> toc(bool print)
+		{
+			elapsed_seconds = std::chrono::system_clock::now() - start;
+			if(print) {std::cout << "elapsed time: " << elapsed_seconds.count() << std::endl;}
+			return elapsed_seconds;
+		}
+	private:
+		    std::chrono::time_point<std::chrono::system_clock> start;
+    		std::chrono::duration<double> elapsed_seconds;
+};
 
 #endif
