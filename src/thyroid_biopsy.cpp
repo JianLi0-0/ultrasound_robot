@@ -42,7 +42,7 @@ class ThyroidBiopsy
         float slice_height_;
 
         sensor_msgs::Image us_image_;
-        VolumeType::Pointer itk_us_image_;
+        VolumeType::Pointer probe_itk_us_image_, itk_us_image_;
         bool is_registration_successful_ = false;
         std::thread cv_thread_;
         Eigen::VectorXd transformation_x0_;
@@ -103,52 +103,57 @@ void ThyroidBiopsy::RegistrationInitialization()
     itk::Vector<double, 3> t; t[0] = 15;t[1] = 5;t[2] = 40;
     transformation_->SetTranslation(t);
     transformation_->SetRotation(0.0,0.0,0.0);
+    transformation_x0_ =  optimization_.ITKTransformToEigen(transformation_); // Initialization variables x0 for optimization
     itk_us_image_ = ExtractSliceFromVolume(volume_, transformation_, slice_width_, slice_height_, spacing_);
 }
 
 void ThyroidBiopsy::MainLoop()
 {
     RegistrationInitialization();
-
-    ROSImageToITK(itk_us_image_, us_image_);
-    
-    // transformation_->SetRotation(0.113,0.123,0.133);
-    
-    transformation_x0_ =  optimization_.ITKTransformToEigen(transformation_);
     auto timer = CustomTimer();
-    timer.tic();
-    auto success = optimization_.Optimize(itk_us_image_, transformation_x0_);
-    auto elapsed_seconds = timer.toc(true);
-    
-    if (success) {
-        std::cout << "Registration succeeded." << std::endl;
-        is_registration_successful_ = true;
-    } else {
-        std::cout << "Failed." << std::endl;
-    }
-    std::cout << "solution :\n" << transformation_x0_ << std::endl;
+    // transformation_->SetRotation(0.113,0.123,0.133);
+    itk::Vector<double, 3> t; 
+    t[0] = 15;t[1] = 5;t[2] = 40;
+    while(ros::ok())
+    {
+        ROSImageToITK(itk_us_image_, us_image_);
 
-    ros::waitForShutdown();
+        // simulation
+        t[2] += 0.5;
+        transformation_->SetTranslation(t);
+        itk_us_image_ = ExtractSliceFromVolume(volume_, transformation_, slice_width_, slice_height_, spacing_);
+        // simulation
+
+        timer.tic();
+        Eigen::VectorXd x0 = transformation_x0_;
+        auto success = optimization_.Optimize(itk_us_image_, x0);
+        if (success) {
+            probe_itk_us_image_ = CopyImage(itk_us_image_);
+            transformation_x0_ = x0;
+            is_registration_successful_ = true;
+        } else {
+            std::cout << "Failed." << std::endl;
+        }
+        timer.toc(true);
+        // std::cout << "solution :\n" << transformation_x0_ << std::endl;
+    }
+
     cv_thread_.join();
 }
 
 void ThyroidBiopsy::TimerDisplayComparison()
 // void ThyroidBiopsy::TimerDisplayComparison(const ros::TimerEvent&)
 {
-    ros::Rate rate(30);
+    ros::Rate rate(100);
     while(ros::ok())
     {
         if(is_registration_successful_)
         {
-            // itk::Vector<double, 3> t; t[0] = 15;t[1] = 5;t[2] = 40;
-            // transformation_->SetTranslation(t);
-            // transformation_->SetRotation(0.0,0.0,0.0);
-            // transformation_x0_ =  optimization_.ITKTransformToEigen(transformation_);
             auto solution_slice = ExtractSliceFromVolume(volume_, optimization_.EigenToITKTransform(transformation_x0_), slice_width_, slice_height_, spacing_);
-            // cout << "SSD: " << SSD3(itk_us_image_, solution_slice) << endl;
-            RegistrationVisualization(us_image_, ITKImageToROS(solution_slice), SSD3(itk_us_image_, solution_slice));
+            // cout << "SSD: " << SSD3(probe_itk_us_image_, solution_slice) << endl;
+            RegistrationVisualization(ITKImageToROS(probe_itk_us_image_), ITKImageToROS(solution_slice), SSD3(probe_itk_us_image_, solution_slice));
             cv::waitKey(1);
-            // is_registration_successful_ = false;
+            is_registration_successful_ = false;
             // SaveImage(solution_slice, "solution_slice.png");
         }
         rate.sleep();
@@ -160,10 +165,14 @@ void ThyroidBiopsy::ROSImageToITK(VolumeType::Pointer& itk_img, sensor_msgs::Ima
     using IteratorType = itk::ImageRegionIterator< VolumeType >;
     IteratorType iterator( itk_img, itk_img->GetRequestedRegion() );
     
-    assert( iterator.GetImageIteratorDimension() == ros_image.data.size() );
-    if(iterator.GetImageIteratorDimension() == ros_image.data.size())
-        cout << "iterator.GetImageIteratorDimension() == ros_image.data.size()" << endl;
-    cout << "iterator.GetImageIteratorDimension():" << iterator.GetImageIteratorDimension() << "  ros_image.data.size():" << ros_image.data.size() << endl;
+    int itk_img_size = iterator.GetRegion().GetSize()[0] * iterator.GetRegion().GetSize()[1] * iterator.GetRegion().GetSize()[2];
+    if(itk_img_size != ros_image.data.size())
+    {
+        cout << "ROSImageToITK(): size does not match!" << endl;
+        cout << "itk_img_size:" << itk_img_size << "  ros_image.data.size():" << ros_image.data.size() << endl;
+        exit(0);
+    }
+    
     auto in = ros_image.data.begin();
     for (iterator.GoToBegin(); !iterator.IsAtEnd(); ++iterator, ++in)
     {
@@ -226,9 +235,9 @@ void ThyroidBiopsy::RegistrationVisualization(sensor_msgs::Image current_image, 
             str,
             cv::Point(result_cv_ptr->image.cols / 20, result_cv_ptr->image.rows / 1.05), //top-left position
             cv::FONT_HERSHEY_DUPLEX,
-            1.0,
+            0.5,
             CV_RGB(255, 255, 255), //font color
-            0.5);
+            0.2);
     cv::Mat comparison;
     CombineImages(comparison, current_cv_ptr->image, result_cv_ptr->image);
     cv::imshow("OPENCV_WINDOW", comparison);

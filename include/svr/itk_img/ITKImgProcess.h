@@ -25,6 +25,7 @@
 #include "itkTranslationTransform.h"
 #include "itkImageRegionIterator.h"
 #include "itkImageBufferRange.h"
+#include "itkImageDuplicator.h"
 
 using namespace std;
 using VolumeType = itk::Image<unsigned char, 3>;
@@ -42,6 +43,7 @@ double SSD3(VolumeType::Pointer imageOne, VolumeType::Pointer imageTwo);
 double SSD4(VolumeType::Pointer imageOne, VolumeType::Pointer imageTwo);
 double SSD5(VolumeType::Pointer imageOne, VolumeType::Pointer imageTwo);
 void SquaredDifferences(VolumeType::Pointer& image, VolumeType::Pointer& image2, IntImgType::Pointer& squaredDiffImg);
+VolumeType::Pointer CopyImage(VolumeType::Pointer image);
 
 namespace Functor
 {

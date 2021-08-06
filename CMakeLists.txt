@@ -23,8 +23,11 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   trajectory_msgs
   trac_ik_lib
+  cv_bridge
+  image_transport
 )
 # find_package(Eigen3 REQUIRED)
+find_package(OpenCV 3 REQUIRED)
 
 
 SET(ITK_DIR "/home/sunlab/Desktop/SVR/ITK/build")
@@ -62,6 +65,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${Eigen3_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 add_executable(admittance_controller
@@ -106,9 +110,29 @@ target_link_libraries(us_image_acquisition
   ${catkin_LIBRARIES}
 )
 
+# test registratration
 add_executable(HelloInsight 
   src/svr/HelloInsight.cpp 
   src/svr/ITKImgProcess.cpp 
   src/svr/Optimization.cpp
 )
 target_link_libraries(HelloInsight ${ITK_LIBRARIES})
+
+# interventional navigation
+add_executable(thyroid_biopsy 
+  src/thyroid_biopsy.cpp 
+  src/svr/ITKImgProcess.cpp 
+  src/svr/Optimization.cpp
+  src/StatesHub.cpp
+  src/ForceTorqueController.cpp
+  src/CustomRosLib.cpp
+)
+add_dependencies(thyroid_biopsy 
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} 
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(thyroid_biopsy
+  ${ITK_LIBRARIES}
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)

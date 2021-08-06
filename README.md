@@ -13,9 +13,26 @@ rosrun ultrasound_robot us_image_acquisition
 
 #### 启动python代码（接收图像和tf，生成.mha）
 ```
-cd /home/sunlab/Desktop/SVR/Slice_to_Volume_Registration_Python
-source activate py36 && python us_image_acquisition.py
+cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
+source activate py36 && python us_image_acquisition.py 2
+```
+
+## 查看超声图像起始点、高度和宽度
+```
+cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
+source activate py36 && python us_image_acquisition.py 1
 ```
 
 
 ## Calibration
+#### see README file in the folder US_CALIBRATION
+
+
+
+## Slice-to-volume Registration
+
+#### 启动python代码，读取并发布图像
+```
+cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
+source activate py36 && python us_image_acquisition.py
+```

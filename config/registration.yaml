@@ -5,8 +5,8 @@ frame_id: probe
 x: 560
 y: 90
 # Size of the ultrasound image for visual servo
-w: 300
-h: 657
+w: 150
+h: 150
 
 # Size of the ultrasound image for reconstruction
 reconstruction_w: 657
