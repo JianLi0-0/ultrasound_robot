@@ -28,7 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 # find_package(Eigen3 REQUIRED)
 find_package(OpenCV 3 REQUIRED)
-
+find_package(VISP REQUIRED)
 
 SET(ITK_DIR "/home/sunlab/Desktop/SVR/ITK/build")
 find_package(ITK REQUIRED)
@@ -66,73 +66,32 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${Eigen3_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
+  ${VISP_INCLUDE_DIRS}
 )
 
-add_executable(admittance_controller
-  src/admittance_controller.cpp
-  src/StatesHub.cpp
-  src/ForceTorqueController.cpp
-)
-add_dependencies(admittance_controller 
-  ${${PROJECT_NAME}_EXPORTED_TARGETS} 
-  ${catkin_EXPORTED_TARGETS}
-  ${PROJECT_NAME}_gencfg
-)
-target_link_libraries(admittance_controller
-  ${catkin_LIBRARIES}
-)
 
-add_executable(wipe_blackboard
-  src/wipe_blackboard.cpp
-  src/StatesHub.cpp
-  src/ForceTorqueController.cpp
-  src/PointCloudCustomLib.cpp
-)
-add_dependencies(wipe_blackboard 
-  ${${PROJECT_NAME}_EXPORTED_TARGETS} 
-  ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(wipe_blackboard
-  ${catkin_LIBRARIES}
-)
+add_executable(admittance_controller src/admittance_controller.cpp src/StatesHub.cpp src/ForceTorqueController.cpp)
+add_dependencies(admittance_controller ${PROJECT_NAME}_gencfg)
+target_link_libraries(admittance_controller ${catkin_LIBRARIES})
 
-add_executable(us_image_acquisition
-  src/us_image_acquisition.cpp
-  src/StatesHub.cpp
-  src/ForceTorqueController.cpp
-  src/CustomRosLib.cpp
-)
-add_dependencies(us_image_acquisition 
-  ${${PROJECT_NAME}_EXPORTED_TARGETS} 
-  ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(us_image_acquisition
-  ${catkin_LIBRARIES}
-)
+
+add_executable(wipe_blackboard src/wipe_blackboard.cpp src/StatesHub.cpp src/ForceTorqueController.cpp src/PointCloudCustomLib.cpp)
+target_link_libraries(wipe_blackboard ${catkin_LIBRARIES})
+
+
+add_executable(us_image_acquisition src/us_image_acquisition.cpp src/StatesHub.cpp src/ForceTorqueController.cpp src/CustomRosLib.cpp)
+target_link_libraries(us_image_acquisition ${catkin_LIBRARIES})
+
 
 # test registratration
-add_executable(HelloInsight 
-  src/svr/HelloInsight.cpp 
-  src/svr/ITKImgProcess.cpp 
-  src/svr/Optimization.cpp
-)
+add_executable(HelloInsight src/svr/HelloInsight.cpp src/svr/ITKImgProcess.cpp src/svr/Optimization.cpp)
 target_link_libraries(HelloInsight ${ITK_LIBRARIES})
 
+
 # interventional navigation
-add_executable(thyroid_biopsy 
-  src/thyroid_biopsy.cpp 
-  src/svr/ITKImgProcess.cpp 
-  src/svr/Optimization.cpp
-  src/StatesHub.cpp
-  src/ForceTorqueController.cpp
-  src/CustomRosLib.cpp
-)
-add_dependencies(thyroid_biopsy 
-  ${${PROJECT_NAME}_EXPORTED_TARGETS} 
-  ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(thyroid_biopsy
-  ${ITK_LIBRARIES}
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
-)
+add_executable(thyroid_biopsy src/thyroid_biopsy.cpp src/svr/ITKImgProcess.cpp src/svr/Optimization.cpp src/StatesHub.cpp src/ForceTorqueController.cpp src/CustomRosLib.cpp)
+target_link_libraries(thyroid_biopsy ${ITK_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
+
+add_executable(visual_servo_test src/visual_servo/visual_servo_test)
+target_link_libraries(visual_servo_test ${catkin_LIBRARIES} ${VISP_LIBRARIES})
