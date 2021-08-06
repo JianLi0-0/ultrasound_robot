@@ -2,12 +2,12 @@
 
 Optimization::Optimization():squaredDiffImg(IntImgType::New()), filter(FilterType::New())
 {
-    using ReaderType = itk::ImageFileReader<VolumeType>;
-    ReaderType::Pointer reader = ReaderType::New();
-    reader->SetFileName("/home/sunlab/Desktop/SVR/program/data/volumen/thyroid.mhd");
-    reader->Update();
-    volume = reader->GetOutput();
-    outputSpacing = volume->GetSpacing();
+    // using ReaderType = itk::ImageFileReader<VolumeType>;
+    // ReaderType::Pointer reader = ReaderType::New();
+    // reader->SetFileName("/home/sunlab/Desktop/SVR/program/data/volumen/thyroid.mhd");
+    // reader->Update();
+    // volume = reader->GetOutput();
+    // outputSpacing = volume->GetSpacing();
 
     IntImgType::IndexType start;
     start[0] = 0; start[1] = 0; start[2] = 0; // first index on Z

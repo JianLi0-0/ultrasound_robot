@@ -35,12 +35,14 @@ VolumeType::Pointer ScaleVolume(VolumeType::Pointer volume, TransformType::Point
     typename LinearInterpolatorType::Pointer interpolator = LinearInterpolatorType::New();
     using ResampleFilterType = itk::ResampleImageFilter<VolumeType, VolumeType>;
     typename ResampleFilterType::Pointer resampleFilter = ResampleFilterType::New();
-    cout << inputSize << endl;
-    cout << inputSpacing << endl;
+    cout << "Before scaling:" << endl;
+    cout << "Size:   " << inputSize << endl;
+    cout << "Spacing:" << inputSpacing << endl;
     inputSize[0]=inputSize[0]/resol_reduction; inputSize[1]=inputSize[1]/resol_reduction; inputSize[2]=inputSize[2]/resol_reduction;
     inputSpacing[0]=inputSpacing[0]*resol_reduction; inputSpacing[1]=inputSpacing[1]*resol_reduction; inputSpacing[2]=inputSpacing[2]*resol_reduction;
-    cout << inputSize << endl;
-    cout << inputSpacing << endl;
+    cout << "After scaling:" << endl;
+    cout << "Size:   " << inputSize << endl;
+    cout << "Spacing:" << inputSpacing << endl;
     resampleFilter->SetInput(volume);
     resampleFilter->SetTransform(transformation);
     resampleFilter->SetInterpolator(interpolator);
@@ -213,4 +215,13 @@ void SquaredDifferences(VolumeType::Pointer& image, VolumeType::Pointer& image2,
         }
         },
         nullptr); // we don't have a filter whose progress needs to be updated
+}
+
+VolumeType::Pointer CopyImage(VolumeType::Pointer image)
+{
+    using DuplicatorType = itk::ImageDuplicator<VolumeType>;
+    DuplicatorType::Pointer duplicator = DuplicatorType::New();
+    duplicator->SetInputImage(image);
+    duplicator->Update();
+    return duplicator->GetOutput();
 }
