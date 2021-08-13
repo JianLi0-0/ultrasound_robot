@@ -10,6 +10,23 @@ CustomRosLib::CustomRosLib(ros::NodeHandle &nh):nh_(nh), joint_seed_(6),
         // home_angles_.data.push_back(json_joint_angle[i].asDouble());
         last_computed_angle_.data.push_back(0.0);    // home postion
     }
+    
+}
+
+CustomRosLib::CustomRosLib(std::shared_ptr<SharedVariable> ptr): joint_seed_(6),
+    ik_solver_("base_link", "ee_link", "/robot_description", 0.008, 1e-5, TRAC_IK::Distance)
+{
+    // set up publisher and subscriber
+    pos_tra_controller_ = nh_.advertise<trajectory_msgs::JointTrajectory>("/pos_based_pos_traj_controller/command", 1);
+    // variables initialization
+    for(int i=0;i<6;i++){
+        // home_angles_.data.push_back(json_joint_angle[i].asDouble());
+        last_computed_angle_.data.push_back(0.0);    // home postion
+    }
+
+    shared_variable_ptr_ = ptr;
+    joints_name_ = shared_variable_ptr_->joint_names;
+    jog_vel_pub_ = nh_.advertise<control_msgs::JointJog>("/jog_arm_server/joint_delta_jog_cmds", 1);
 }
 
 CustomRosLib::~CustomRosLib() {}
@@ -150,6 +167,21 @@ bool CustomRosLib::DeactivateController(string controller_name)
 }
 bool CustomRosLib::SwitchController(string stop_controller_name, string start_controller_name)
 {
+    ros::ServiceClient list_controllers_client = nh_.serviceClient<controller_manager_msgs::ListControllers>("/controller_manager/list_controllers");
+    controller_manager_msgs::ListControllers list_controllers_srv;
+    if(list_controllers_client.call(list_controllers_srv))
+    {
+        auto controller_lists = list_controllers_srv.response.controller;
+        for(auto controller = controller_lists.begin();controller!=controller_lists.end();controller++)
+        {
+            if(controller->name == start_controller_name && controller->state == "running")
+            {
+                ROS_INFO("The controller %s is already running", start_controller_name.c_str());
+                return true;
+            }
+        }
+    }
+
     ros::ServiceClient client = nh_.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
     controller_manager_msgs::SwitchController srv;
     srv.request.start_controllers.push_back(start_controller_name);
@@ -166,4 +198,47 @@ bool CustomRosLib::SwitchController(string stop_controller_name, string start_co
     }
 
     return false;
+}
+
+void CustomRosLib::PublishJointVelocity(Eigen::VectorXd joint_velocity)
+{
+    control_msgs::JointJog joint_deltas;
+    for(int i=0;i<joint_velocity.size();i++)
+    {
+        joint_deltas.joint_names.push_back(joints_name_[i]);
+        joint_deltas.velocities.push_back(joint_velocity(i));
+    }
+    joint_deltas.header.stamp = ros::Time::now();
+    jog_vel_pub_.publish(joint_deltas);
+}
+
+void CustomRosLib::CheckBox(Eigen::Vector3d center, Eigen::Vector3d range)
+{
+    auto eef = shared_variable_ptr_->end_effector_state;
+    auto upper = center + range;
+    auto lower = center - range;
+    if(eef.translation()[0] > upper[0] || eef.translation()[0] < lower[0] ||
+        eef.translation()[1] > upper[1] || eef.translation()[1] < lower[1] ||
+        eef.translation()[2] > upper[2] || eef.translation()[2] < lower[2])
+    {
+        cout << "The robot is out of bound!" << endl;
+        cout << "upper:" << endl << upper << endl << "lower:" << endl << lower << endl;
+        cout << "eef" << endl << eef.translation() << endl;
+
+        while(ros::ok())
+        {
+            ros::Rate rate(200);
+            control_msgs::JointJog joint_deltas;
+            for(int i=0;i<6;i++)
+            {
+                joint_deltas.joint_names.push_back(joints_name_[i]);
+                joint_deltas.velocities.push_back(0);
+            }
+            joint_deltas.header.stamp = ros::Time::now();
+            jog_vel_pub_.publish(joint_deltas);
+            rate.sleep();
+        }
+
+    }
+
 }

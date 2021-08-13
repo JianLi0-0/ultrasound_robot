@@ -28,6 +28,52 @@ def SaveImage(np_img_list, transformation_list, file_name):
     print("Saved file name: " + file_name)
     return sitk_img
 
+def MhaFileMeter2Pixel(volume, spacing ,file_name):
+    # volume = sitk.ReadImage("./dataset/thyroid.mhd")
+    dim = volume.GetSize()[2]
+    # for i in range(dim):
+    #     seq_num = "0"*(4-len(str(i))) + str(i)
+    #     tf = volume.GetMetaData("Seq_Frame"+seq_num+"_ProbeToTrackerTransform")
+    #     tf = tf.split( )
+    #     for i in range(len(tf)):
+    #         tf[i] = float(tf[i])
+    #     tf[3] = tf[3]*1000/spacing
+    #     tf[7] = tf[7]*1000/spacing
+    #     tf[11] = tf[11]*1000/spacing
+    #     volume.SetMetaData("Seq_Frame"+seq_num+"_ProbeToTrackerTransform", str(tf)[1:-1].replace(",",""))
+
+    img_array = sitk.GetArrayFromImage(volume)
+    print(img_array.shape)
+    img_array = img_array.swapaxes(1,2)
+    img_array = np.flip(img_array, 1)
+    print(img_array.shape)
+    sitk_img = sitk.GetImageFromArray(img_array)
+    sitk_img.SetSpacing([1, 1, 1])
+    sitk_img.SetMetaData("Kinds", "domain domain list")
+    sitk_img.SetMetaData("UltrasoundImageOrientation", "MFA")
+
+    for i in range(dim):
+        seq_num = "0"*(4-len(str(i))) + str(i)
+        tf = volume.GetMetaData("Seq_Frame"+seq_num+"_ProbeToTrackerTransform")
+        tf = tf.split( )
+        for i in range(len(tf)):
+            tf[i] = float(tf[i])
+        tf[3] = tf[3]*1000/spacing
+        tf[7] = tf[7]*1000/spacing
+        tf[11] = tf[11]*1000/spacing
+        sitk_img.SetMetaData("Seq_Frame"+seq_num+"_ProbeToTrackerTransform", str(tf)[1:-1].replace(",",""))
+        # sitk_img.SetMetaData("Seq_Frame"+seq_num+"_ProbeToTrackerTransform", str(transformation_list[i])[1:-1].replace(",",""))
+        sitk_img.SetMetaData("Seq_Frame"+seq_num+"_ProbeToTrackerTransformStatus", str("OK"))
+        sitk_img.SetMetaData("Seq_Frame"+seq_num+"_Timestamp", str(i))
+        sitk_img.SetMetaData("Seq_Frame"+seq_num+"_ImageStatus", str("OK"))
+
+
+    writer = sitk.ImageFileWriter()
+    writer.SetFileName(file_name)
+    writer.Execute(sitk_img)
+    print("Saved file name: " + file_name)
+
+
 def GenerateTestData(volume, slices_num):
     np_img_list = []
     transformation_list = []
@@ -65,6 +111,8 @@ def GenerateTestData(volume, slices_num):
     return np_img_list, transformation_list
 
 if __name__ == '__main__':
-    volume = sitk.ReadImage("./dataset/thyroid.mhd")
-    np_img_list, transformation_list = GenerateTestData(volume, 500)
-    SaveImage(np_img_list, transformation_list, "thyroid_sample.mha")
+    # volume = sitk.ReadImage("./dataset/thyroid.mhd")
+    # np_img_list, transformation_list = GenerateTestData(volume, 500)
+    # SaveImage(np_img_list, transformation_list, "thyroid_sample.mha")
+    volume = sitk.ReadImage("thyroid_sample_raw.mha")
+    MhaFileMeter2Pixel(volume, 46.0/527.0, "thyroid_sample.mha")

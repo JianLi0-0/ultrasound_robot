@@ -25,6 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
   trac_ik_lib
   cv_bridge
   image_transport
+  nav_msgs
 )
 # find_package(Eigen3 REQUIRED)
 find_package(OpenCV 3 REQUIRED)
@@ -36,6 +37,8 @@ include(${ITK_USE_FILE})
 include_directories( include/svr/optim )
 include_directories( include/svr/itk_img )
 include_directories( include/svr/optimization )
+include_directories( include/svr/optimization )
+include_directories( include/visual_servo )
 include_directories( /home/sunlab/Desktop/SVR/eigen )
 
 generate_dynamic_reconfigure_options(
@@ -75,8 +78,8 @@ add_dependencies(admittance_controller ${PROJECT_NAME}_gencfg)
 target_link_libraries(admittance_controller ${catkin_LIBRARIES})
 
 
-add_executable(wipe_blackboard src/wipe_blackboard.cpp src/StatesHub.cpp src/ForceTorqueController.cpp src/PointCloudCustomLib.cpp)
-target_link_libraries(wipe_blackboard ${catkin_LIBRARIES})
+# add_executable(wipe_blackboard src/wipe_blackboard.cpp src/StatesHub.cpp src/ForceTorqueController.cpp src/PointCloudCustomLib.cpp)
+# target_link_libraries(wipe_blackboard ${catkin_LIBRARIES})
 
 
 add_executable(us_image_acquisition src/us_image_acquisition.cpp src/StatesHub.cpp src/ForceTorqueController.cpp src/CustomRosLib.cpp)
@@ -93,5 +96,5 @@ add_executable(thyroid_biopsy src/thyroid_biopsy.cpp src/svr/ITKImgProcess.cpp s
 target_link_libraries(thyroid_biopsy ${ITK_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 
-add_executable(visual_servo_test src/visual_servo/visual_servo_test)
+add_executable(visual_servo_test src/visual_servo/visual_servo_test src/visual_servo/VisualServo.cpp src/StatesHub.cpp src/CustomRosLib.cpp)
 target_link_libraries(visual_servo_test ${catkin_LIBRARIES} ${VISP_LIBRARIES})

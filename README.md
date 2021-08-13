@@ -17,11 +17,19 @@ cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
 source activate py36 && python us_image_acquisition.py 2
 ```
 
+
+
+
+
 ## 查看超声图像起始点、高度和宽度
 ```
 cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
 source activate py36 && python us_image_acquisition.py 1
 ```
+
+
+
+
 
 
 ## Calibration
@@ -35,4 +43,6 @@ source activate py36 && python us_image_acquisition.py 1
 ```
 cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
 source activate py36 && python us_image_acquisition.py
+
+rosrun ultrasound_robot thyroid_biopsy
 ```

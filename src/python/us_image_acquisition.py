@@ -15,6 +15,11 @@ if len(sys.argv) == 1:
     mode = "servo"
 elif sys.argv[1]=='1':
     mode = "display" # used to identify the height and width of the ultrasound image
+    def setMouseCallback(event, x, y, flags, param):
+        if event == cv2.EVENT_MOUSEMOVE:
+            print(x,y)
+    cv2.namedWindow('ultrasound')
+    cv2.setMouseCallback('ultrasound',setMouseCallback) 
 elif sys.argv[1]=='2':
     mode = "reconstruction"
 print("mode: " + mode)
@@ -22,7 +27,7 @@ print("mode: " + mode)
 ############### ROS ###############
 command = "0" # 0 for waiting; 1 for sampling; 2 for exit
 def sample_command_callback(msg):
-    print(msg)
+    # print(msg)
     global command
     command = msg.data
 
@@ -30,7 +35,7 @@ ee_link_tf = []
 def ee_link_tf_callback(msg):
     global ee_link_tf
     ee_link_tf = list(msg.data)
-    print(ee_link_tf)
+    # print(ee_link_tf)
 
 rospy.init_node('sample_ultrasound', anonymous=True)
 rospy.Subscriber("/sample_command", String, sample_command_callback)
@@ -50,13 +55,18 @@ def crop_image(image_arr, starting_point, size):
 np_img_list = []
 transformation_list = []
 starting_point = [rospy.get_param("/svr/y"), rospy.get_param("/svr/x")] #(height, weight)
-servo_size = [rospy.get_param("/svr/h"), rospy.get_param("/svr/w")] # 1484-560q
+servo_starting_point = [rospy.get_param("/svr/servo_y"), rospy.get_param("/svr/servo_x")] #(height, weight)
+servo_size = [rospy.get_param("/svr/servo_h"), rospy.get_param("/svr/servo_w")] # 1484-560q
+reduction = rospy.get_param("/svr/volume_resol_reduction")
 size = [rospy.get_param("/svr/reconstruction_h"), rospy.get_param("/svr/reconstruction_w")] # 1484-560q
 
 # cv2.setMouseCallback("MyImage", onmouse)   #回调绑定窗口
 # (camera.width, camera.height): [1920,1080]
 
-camera = Camera('/dev/video0')
+camera = Camera('/dev/video1')
+if(camera.width!=1920): 
+    print("camera.width is not 1280")
+    exit(0)
 print("camera.width:"+str(camera.width)+"   camera.height:"+str(camera.height))
 cropped = 0
 count = 0
@@ -64,8 +74,8 @@ while rospy.is_shutdown() is False:
 # while(1):
     try:
         frame = camera.get_frame()
-        # image=Image.frombytes('RGB', (camera.width, camera.height), frame, 'raw', 'RGB') 
-        image = Image.open("geeks.jpg")
+        image=Image.frombytes('RGB', (camera.width, camera.height), frame, 'raw', 'RGB') 
+        # image = Image.open("geeks.jpg")
     except:
         print("camera.get_frame() failed")
     # print("FPS: ", 1.0 / (time.time() - start_time))
@@ -74,13 +84,21 @@ while rospy.is_shutdown() is False:
     
 
     if mode == 'servo':
-        cropped = crop_image(gray, starting_point, servo_size)
+        enlarge_size = [servo_size[1]*reduction, servo_size[0]*reduction]
+        cropped = crop_image(gray, servo_starting_point, enlarge_size)
+        resized = cv2.resize(cropped, tuple(servo_size), interpolation = cv2.INTER_AREA)
         try:
-            ros_img = bridge.cv2_to_imgmsg(cropped, encoding="passthrough")
-            # print(ros_img.encoding)
+            ros_img = bridge.cv2_to_imgmsg(resized, encoding="passthrough")
             us_img_publisher.publish(ros_img)
         except CvBridgeError as e:
             print(e)
+        
+        cv2.rectangle(gray, (servo_starting_point[1], servo_starting_point[0]), (servo_starting_point[1]+servo_size[1]*reduction, servo_starting_point[0]+servo_size[0]*reduction), 255, 2)
+        cropped2 = crop_image(gray, starting_point, size)
+        cv2.imshow('servo', np.asarray(cropped2))
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            cv2.destroyAllWindows()
+            break
 
     elif mode == 'display':
         cv2.imshow('ultrasound', np.asarray(image))
@@ -94,7 +112,7 @@ while rospy.is_shutdown() is False:
             # volume = sitk.ReadImage("./dataset/thyroid.mhd")
             # trash, transformation_list = UltrasoundProcess.GenerateTestData(volume, count)
             if len(np_img_list) == len(transformation_list):
-                UltrasoundProcess.SaveImage(np_img_list, transformation_list, "test.mha")
+                UltrasoundProcess.SaveImage(np_img_list, transformation_list, "thyroid_sample_raw.mha")
             else:
                 print("Error: len(np_img_list) != len(transformation_list)!")
             break
@@ -103,12 +121,14 @@ while rospy.is_shutdown() is False:
             count = count + 1
             print("sample: "+str(count))
             # start_time = time.time()
-            np_img_list.append(cropped)
+            
             if ee_link_tf:
+                np_img_list.append(cropped)
+                
                 r = R.from_quat(ee_link_tf[3:])
                 matrix = tf.transformations.compose_matrix(translate=ee_link_tf[0:3], angles=list(r.as_euler('xyz')))
                 transformation_list.append(list(matrix.flatten()))
-                print(ee_link_tf)
+                # print(ee_link_tf)
                 # print(list(r.as_euler('xyz')))
                 # print(matrix)
                 ee_link_tf = []

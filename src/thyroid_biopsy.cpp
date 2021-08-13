@@ -46,6 +46,9 @@ class ThyroidBiopsy
         bool is_registration_successful_ = false;
         std::thread cv_thread_;
         Eigen::VectorXd transformation_x0_;
+        itk::Vector<double, 3> t_; 
+        double volume_resol_reduction_ = 1;
+        double elasped_time_ = 1;
 
 
     public:
@@ -74,8 +77,12 @@ cv_thread_(&ThyroidBiopsy::TimerDisplayComparison, this)
     // py_sample_command_pub_ = nh_.advertise<std_msgs::String>("/sample_command", 1);
     force_controller_ = new ForceTorqueController(shared_variable_ptr_, config_tree_);
 
-    nh_.getParam("/svr/w", slice_width_);
-    nh_.getParam("/svr/h", slice_height_);
+    nh_.getParam("/svr/servo_w", slice_width_);
+    nh_.getParam("/svr/servo_h", slice_height_);
+    nh_.getParam("/svr/volume_resol_reduction", volume_resol_reduction_);
+    // slice_width_ = slice_width_ / volume_resol_reduction_;
+    // slice_height_ = slice_height_ / volume_resol_reduction_;
+    // cout << "slice_width: " << slice_width_ << " slice_height: " << slice_height_ << endl;
 
 }
 
@@ -91,17 +98,17 @@ void ThyroidBiopsy::RegistrationInitialization()
 
     using ReaderType = itk::ImageFileReader<VolumeType>;
     ReaderType::Pointer reader = ReaderType::New();
-    reader->SetFileName("/home/sunlab/Desktop/SVR/program/data/volumen/thyroid.mhd");
+    reader->SetFileName("/home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python/biopsy_single.mha");
     reader->Update();
     volume_ = reader->GetOutput();
-    volume_ = ScaleVolume(volume_, transformation_, 1);
+    volume_ = ScaleVolume(volume_, transformation_, volume_resol_reduction_);
     spacing_ = volume_->GetSpacing();
 
     optimization_.SetVolume(volume_);
     optimization_.SetSliceSize(slice_width_, slice_height_);
 
-    itk::Vector<double, 3> t; t[0] = 15;t[1] = 5;t[2] = 40;
-    transformation_->SetTranslation(t);
+    t_[0] = 100*spacing_[0]/volume_resol_reduction_;t_[1] = 120*spacing_[0]/volume_resol_reduction_;t_[2] = 300*spacing_[0]/volume_resol_reduction_;
+    transformation_->SetTranslation(t_);
     transformation_->SetRotation(0.0,0.0,0.0);
     transformation_x0_ =  optimization_.ITKTransformToEigen(transformation_); // Initialization variables x0 for optimization
     itk_us_image_ = ExtractSliceFromVolume(volume_, transformation_, slice_width_, slice_height_, spacing_);
@@ -112,16 +119,25 @@ void ThyroidBiopsy::MainLoop()
     RegistrationInitialization();
     auto timer = CustomTimer();
     // transformation_->SetRotation(0.113,0.123,0.133);
-    itk::Vector<double, 3> t; 
-    t[0] = 15;t[1] = 5;t[2] = 40;
+
+    auto timer2 = CustomTimer();
+    timer2.tic();
     while(ros::ok())
     {
         ROSImageToITK(itk_us_image_, us_image_);
-
         // simulation
-        t[2] += 0.5;
-        transformation_->SetTranslation(t);
-        itk_us_image_ = ExtractSliceFromVolume(volume_, transformation_, slice_width_, slice_height_, spacing_);
+        // if(timer2.toc(false) < 10){
+        //     t_[2] += 0.4;
+        // }
+        // else if(timer2.toc(false) < 15){
+        //     t_[2] -= 0.4;
+        // }
+        // else if(timer2.toc(false) < 23){
+        //     t_[0] += 0.35;
+        // }
+        // else exit(0);
+        // transformation_->SetTranslation(t_);
+        // itk_us_image_ = ExtractSliceFromVolume(volume_, transformation_, slice_width_, slice_height_, spacing_);
         // simulation
 
         timer.tic();
@@ -134,7 +150,7 @@ void ThyroidBiopsy::MainLoop()
         } else {
             std::cout << "Failed." << std::endl;
         }
-        timer.toc(true);
+        elasped_time_ = timer.toc(true);
         // std::cout << "solution :\n" << transformation_x0_ << std::endl;
     }
 
@@ -226,21 +242,50 @@ void ThyroidBiopsy::RegistrationVisualization(sensor_msgs::Image current_image, 
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
+
+    cv::Mat comparison;
+    CombineImages(comparison, current_cv_ptr->image, result_cv_ptr->image);
+    cv::Mat resized_up;
+    cv::resize(comparison, resized_up, cv::Size(slice_width_*volume_resol_reduction_*2, slice_height_*volume_resol_reduction_), cv::INTER_LINEAR);
+
     string str1 = "SSD: ";
     char ch[256];
     sprintf(ch, "%lf", ssd);
     string str2 = ch;
     string str = str1 + str2;
-    cv::putText(result_cv_ptr->image,
+    cv::putText(resized_up,
             str,
-            cv::Point(result_cv_ptr->image.cols / 20, result_cv_ptr->image.rows / 1.05), //top-left position
-            cv::FONT_HERSHEY_DUPLEX,
+            cv::Point(resized_up.cols / 2, resized_up.rows / 1.05), //top-left position
+            cv::FONT_HERSHEY_SIMPLEX,
             0.5,
             CV_RGB(255, 255, 255), //font color
             0.2);
-    cv::Mat comparison;
-    CombineImages(comparison, current_cv_ptr->image, result_cv_ptr->image);
-    cv::imshow("OPENCV_WINDOW", comparison);
+    str1 = "Frequence: ";
+    sprintf(ch, "%lf", 1.0/elasped_time_);
+    str2 = ch;
+    str = str1 + str2;
+    cv::putText(resized_up,
+            str,
+            cv::Point(resized_up.cols / 2, resized_up.rows / 1.1), //top-left position
+            cv::FONT_HERSHEY_SIMPLEX,
+            0.5,
+            CV_RGB(255, 255, 255), //font color
+            0.2);
+    cv::putText(resized_up,
+            "real-time probe image",
+            cv::Point(resized_up.cols / 20, resized_up.rows / 20), //top-left position
+            cv::FONT_HERSHEY_SIMPLEX,
+            0.5,
+            CV_RGB(255, 255, 255), //font color
+            0.2);
+    cv::putText(resized_up,
+            "slice from model",
+            cv::Point(resized_up.cols / 2 + resized_up.cols / 20, resized_up.rows / 20), //top-left position
+            cv::FONT_HERSHEY_SIMPLEX,
+            0.5,
+            CV_RGB(255, 255, 255), //font color
+            0.2);
+    cv::imshow("OPENCV_WINDOW", resized_up);
 }
 
 void ThyroidBiopsy::SaveImage(VolumeType::Pointer image, string image_name)

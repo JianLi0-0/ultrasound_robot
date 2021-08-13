@@ -60,6 +60,11 @@ void UltrasoundCalibration::SendTfAndSampleCommand()
     }
     // std::cout << py_ee_link_tf << std::endl;
     py_ee_link_tf_pub_.publish(py_ee_link_tf);
+    py_ee_link_tf_pub_.publish(py_ee_link_tf);
+    py_ee_link_tf_pub_.publish(py_ee_link_tf);
+    py_ee_link_tf_pub_.publish(py_ee_link_tf);
+    py_ee_link_tf_pub_.publish(py_ee_link_tf);
+    py_ee_link_tf_pub_.publish(py_ee_link_tf);
     std_msgs::String command;
     command.data = "1";
     py_sample_command_pub_.publish(command);
@@ -86,8 +91,9 @@ void UltrasoundCalibration::MainLoop()
     for(int i=0;i<6;i++)
     {
         char command;
-        std::cout << "Press e to record waypoint:" << i << std::endl;
+        std::cout << "Press e to record waypoint, s to start" << i << std::endl;
         std::cin >> command;
+        if(command == 's') {std::cout << "Start sampling ..." << std::endl; break;}
         if(command != 'e') {std::cout << "Kill this program" << std::endl; exit(0);}
         geometry_msgs::Pose ee_link = custom_ros_lib_.ListenToTransform("base_link", "ee_link");
         target_pose_array.poses.push_back(ee_link);
@@ -99,7 +105,7 @@ void UltrasoundCalibration::MainLoop()
 
     while (ros::ok())
     {
-        int interval = 50;
+        int interval = 100;
         custom_ros_lib_.UpdateJointSeed(shared_variable_ptr_->joint_states);
         for(int cnt=0;cnt<target_pose_array.poses.size()/2;cnt++)
         {
@@ -126,6 +132,7 @@ void UltrasoundCalibration::MainLoop()
                 {
                     continue;
                 }
+                ros::Duration(0.1).sleep();
                 SendTfAndSampleCommand();
                 ros::Duration(0.2).sleep();
             }

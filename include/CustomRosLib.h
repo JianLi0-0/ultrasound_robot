@@ -13,6 +13,9 @@
 #include <tf/transform_broadcaster.h>
 #include <trajectory_msgs/JointTrajectory.h>
 #include <controller_manager_msgs/SwitchController.h>
+#include "SharedVariable.h"
+#include <control_msgs/JointJog.h>
+#include <controller_manager_msgs/ListControllers.h>
 
 using namespace std;
 
@@ -20,6 +23,7 @@ class CustomRosLib
 {
     public:
         CustomRosLib(ros::NodeHandle &nh);
+        CustomRosLib(std::shared_ptr<SharedVariable> ptr);
         virtual ~CustomRosLib();
 
         bool CartesianPositionControl(geometry_msgs::Pose target_position, double duration, double delay);
@@ -31,6 +35,8 @@ class CustomRosLib
         bool ActivateController(string controller_name);
         bool DeactivateController(string controller_name);
         bool SwitchController(string stop_controller_name, string start_controller_name);
+        void PublishJointVelocity(Eigen::VectorXd joint_velocity);
+        void CheckBox(Eigen::Vector3d center, Eigen::Vector3d range);
 
     private:
         ros::NodeHandle nh_;
@@ -43,6 +49,10 @@ class CustomRosLib
         KDL::JntArray joint_seed_;
         KDL::Frame desired_eef_pose_;
         std_msgs::Float64MultiArray last_computed_angle_;
+
+        std::shared_ptr<SharedVariable> shared_variable_ptr_;
+        vector<string> joints_name_;
+        ros::Publisher jog_vel_pub_;
 };
 
 #endif
