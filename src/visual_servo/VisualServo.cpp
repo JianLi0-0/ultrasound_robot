@@ -6,8 +6,8 @@ VisualServo::VisualServo(std::shared_ptr<SharedVariable> ptr)
 
     tf::StampedTransform transform;
     static tf::TransformListener listener(ros::Duration(5));
-    listener.waitForTransform("ee_link", "camera_link", ros::Time(0), ros::Duration(3.0));
-    listener.lookupTransform("ee_link", "camera_link", ros::Time(0), transform);
+    listener.waitForTransform("ee_link", "camera_color_optical_frame", ros::Time(0), ros::Duration(3.0));
+    listener.lookupTransform("ee_link", "camera_color_optical_frame", ros::Time(0), transform);
     
     end_effector_to_camera_.setIdentity();
     end_effector_to_camera_.translate( Eigen::Vector3d(transform.getOrigin()) );
@@ -24,27 +24,50 @@ VisualServo::~VisualServo()
 Eigen::VectorXd VisualServo::PBVS1(const Eigen::Affine3d& camera_to_object, const Eigen::Affine3d& desired_camera_to_object)
 {
     auto desired_cam_to_cam = desired_camera_to_object * camera_to_object.inverse();
-    auto vec_desired_cam_to_cam = FromeMatrixToErrorAxisAngle(desired_cam_to_cam);
+    auto vec_error = FromeMatrixToErrorAxisAngle(desired_cam_to_cam);
+    // vec_error = vec_desired_cam_to_cam - 0 = s - s*
 
     Eigen::MatrixXd jacobian_e(6, 6);
     jacobian_e.block(0,0,6,6) = Eigen::MatrixXd::Zero(6,6);
     jacobian_e.block(0,0,3,3) = desired_cam_to_cam.rotation().inverse();
     jacobian_e.block(3,3,3,3) = Eigen::Matrix3d::Identity();
 
-    auto velocity_desired_camera_frame = -lambda_ * jacobian_e * vec_desired_cam_to_cam;
+    auto velocity_camera_frame = -lambda_ * jacobian_e * vec_error;
 
     const auto jacobian = get_jacobian();
     const auto base_to_end_effector = get_base_2_end_effector();
-    auto base_to_desired_camera = base_to_end_effector * end_effector_to_camera_ * desired_cam_to_cam.inverse();
-    Eigen::VectorXd velocity_base_frame = AdjointTransformationMatrix(base_to_desired_camera) * velocity_desired_camera_frame;
+    auto base_to_camera = base_to_end_effector * end_effector_to_camera_;
+    // auto base_to_desired_camera = base_to_end_effector * end_effector_to_camera_ * desired_cam_to_cam.inverse();
+    Eigen::VectorXd velocity_base_frame = AdjointTransformationMatrix(base_to_camera) * velocity_camera_frame;
+    // Eigen::VectorXd velocity_base_frame = AdjointTransformationMatrix(base_to_desired_camera) * velocity_desired_camera_frame;
     Eigen::VectorXd velocity_joint_space = jacobian.inverse() * velocity_base_frame;
+    cout << "velocity_base_frame: " << endl << velocity_base_frame << endl;
 
     return velocity_joint_space;
 }
 
-Eigen::VectorXd VisualServo::PBVS2()
+Eigen::VectorXd VisualServo::PBVS2(const Eigen::Affine3d& camera_to_object, const Eigen::Affine3d& desired_camera_to_object)
 {
+    auto vec_error = FromeMatrixToErrorAxisAngle(camera_to_object);
+    vec_error.block(0,0,3,1) = vec_error.block(0,0,3,1)  - desired_camera_to_object.matrix().block(0,3,3,1);
+    // vec_error = vec_camera_to_object - (c*^t_o, 0) = s - s*
 
+    Eigen::MatrixXd jacobian_e(6, 6);
+    jacobian_e.block(0,0,6,6) = Eigen::MatrixXd::Zero(6,6);
+    jacobian_e.block(0,0,3,3) = - Eigen::Matrix3d::Identity();
+    jacobian_e.block(0,3,3,3) = SkewSymmetricMatrix(camera_to_object.matrix().block(0,3,3,1));
+    jacobian_e.block(3,3,3,3) = Eigen::Matrix3d::Identity();
+
+    auto velocity_camera_frame = -lambda_ * jacobian_e * vec_error;
+
+    const auto jacobian = get_jacobian();
+    const auto base_to_end_effector = get_base_2_end_effector();
+    auto base_to_camera = base_to_end_effector * end_effector_to_camera_;
+    Eigen::VectorXd velocity_base_frame = AdjointTransformationMatrix(base_to_camera) * velocity_camera_frame;
+    Eigen::VectorXd velocity_joint_space = jacobian.inverse() * velocity_base_frame;
+    cout << "PBVS2 velocity_base_frame: " << endl << velocity_base_frame << endl;
+
+    return velocity_joint_space;
 }
 
 Eigen::VectorXd VisualServo::IBVS()

@@ -14,8 +14,9 @@ class VisualServo
         ~VisualServo();
 
         Eigen::VectorXd PBVS1(const Eigen::Affine3d& camera_to_object, const Eigen::Affine3d& desired_camera_to_object);
-        Eigen::VectorXd PBVS2();
+        Eigen::VectorXd PBVS2(const Eigen::Affine3d& camera_to_object, const Eigen::Affine3d& desired_camera_to_object);
         Eigen::VectorXd IBVS();
+        void set_lambda(double lambda);
 
     private:
         Eigen::VectorXd FromeMatrixToErrorAxisAngle(const Eigen::Affine3d& transformation_error);
@@ -24,8 +25,6 @@ class VisualServo
         Eigen::VectorXd WrenchTruncation(Eigen::VectorXd original_wrench, double force_threshold, double torque_threshold);
         Eigen::VectorXd PoseErrorEpsilon(Eigen::VectorXd original_vector, double position_threshold, double orientation_threshold);
         Eigen::VectorXd CalculateTaskFrameWrench(Eigen::Affine3d& task_frame_2_end_effector);
-
-        void set_lambda(double lambda);
 
         Eigen::Affine3d get_base_2_end_effector();
         Eigen::VectorXd get_ft_link_wrench();
