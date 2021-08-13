@@ -26,7 +26,7 @@ private:
     robot_state::JointModelGroup* joint_model_group_;
 
     std::shared_ptr<SharedVariable> shared_variable_ptr_;
-    boost::property_tree::ptree config_tree_;
+    // boost::property_tree::ptree config_tree_;
 
     
 public:

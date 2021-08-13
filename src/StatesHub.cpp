@@ -4,8 +4,8 @@ StatesHub::StatesHub(std::shared_ptr<SharedVariable> ptr)
 :robot_model_loader_("robot_description")
 {
     shared_variable_ptr_ = ptr;
-    config_tree_ = shared_variable_ptr_->config_tree;
-    force_torque_sensor_sub_ = nh_.subscribe(config_tree_.get<std::string>("ros_config.wrench_topic"), 1, &StatesHub::force_torque_sensor_callback, this);
+    // config_tree_ = shared_variable_ptr_->config_tree;
+    force_torque_sensor_sub_ = nh_.subscribe("/ft_sensor/ft_compensated", 1, &StatesHub::force_torque_sensor_callback, this);
     joint_states_sub_ = nh_.subscribe("/joint_states", 1, &StatesHub::joint_states_callback, this);
     // kinematic model
     kinematic_model_ = robot_model_loader_.getModel();
@@ -15,7 +15,8 @@ StatesHub::StatesHub(std::shared_ptr<SharedVariable> ptr)
     joint_model_group_ = kinematic_model_->getJointModelGroup("manipulator");
     shared_variable_ptr_->joint_names = joint_model_group_->getVariableNames();
 
-
+    Eigen::VectorXd force_torque(6);
+    shared_variable_ptr_->wrench = force_torque;
 }
 
 StatesHub::~StatesHub()
