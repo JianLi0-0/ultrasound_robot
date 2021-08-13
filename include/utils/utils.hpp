@@ -23,11 +23,11 @@ class CustomTimer
 		{
 			start = std::chrono::system_clock::now();
 		}
-		std::chrono::duration<double> toc(bool print)
+		double toc(bool print)
 		{
 			elapsed_seconds = std::chrono::system_clock::now() - start;
 			if(print) {std::cout << "elapsed time: " << elapsed_seconds.count() << std::endl;}
-			return elapsed_seconds;
+			return elapsed_seconds.count();
 		}
 	private:
 		    std::chrono::time_point<std::chrono::system_clock> start;

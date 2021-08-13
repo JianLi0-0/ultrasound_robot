@@ -1,2 +1,4 @@
-.vscode/c_cpp_properties.json
-.vscode/settings.json
+.vscode
+include/svr/optim
+src/python/__pycache__
+src/python/*.mha
