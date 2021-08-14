@@ -41,6 +41,12 @@ include_directories( include/svr/optimization )
 include_directories( include/visual_servo )
 include_directories( /home/sunlab/Desktop/SVR/eigen )
 
+set(ARMADILLO_INCLUDE_DIR /home/sunlab/Desktop/SVR/armadillo/include)
+find_package(Armadillo REQUIRED)
+include_directories(${ARMADILLO_INCLUDE_DIRS})
+include_directories( include/extended_kalman_filter )
+include_directories(/usr/include/python2.7)
+
 generate_dynamic_reconfigure_options(
   cfg/force_controller.cfg
 )
@@ -98,3 +104,10 @@ target_link_libraries(thyroid_biopsy ${ITK_LIBRARIES} ${catkin_LIBRARIES} ${Open
 
 add_executable(visual_servo_test src/visual_servo/visual_servo_test src/visual_servo/VisualServo.cpp src/StatesHub.cpp src/CustomRosLib.cpp)
 target_link_libraries(visual_servo_test ${catkin_LIBRARIES} ${VISP_LIBRARIES})
+
+# kalman filter
+add_executable(KF_example src/extended_kalman_filter/kf_example.cpp)
+target_link_libraries(KF_example ${ARMADILLO_LIBRARIES} libpython2.7.so)
+
+add_executable(EKF_example src/extended_kalman_filter/ekf_example.cpp)
+target_link_libraries(EKF_example ${ARMADILLO_LIBRARIES} libpython2.7.so)
