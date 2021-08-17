@@ -242,3 +242,26 @@ void CustomRosLib::CheckBox(Eigen::Vector3d center, Eigen::Vector3d range)
     }
 
 }
+
+void CustomRosLib::BroadcastTransform(string parent_frame, string child_frame, geometry_msgs::PoseStamped transformation)
+{
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    auto orient = transformation.pose.orientation;
+    auto position = transformation.pose.position;
+    transform.setOrigin( tf::Vector3(position.x, position.y, position.z) );
+    transform.setRotation( tf::Quaternion(orient.x, orient.y, orient.z, orient.w) );
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), parent_frame, child_frame));
+}
+
+
+void CustomRosLib::BroadcastTransform(string parent_frame, string child_frame, Eigen::Affine3d transformation)
+{
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    auto orient = Eigen::Quaterniond( transformation.linear() );
+    auto position = transformation.translation();
+    transform.setOrigin( tf::Vector3(position(0,0), position(1,0), position(2,0)) );
+    transform.setRotation( tf::Quaternion(orient.x(), orient.y(), orient.z(), orient.w()) );
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), parent_frame, child_frame));
+}

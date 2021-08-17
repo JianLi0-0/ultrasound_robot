@@ -37,6 +37,8 @@ class CustomRosLib
         bool SwitchController(string stop_controller_name, string start_controller_name);
         void PublishJointVelocity(Eigen::VectorXd joint_velocity);
         void CheckBox(Eigen::Vector3d center, Eigen::Vector3d range);
+        void BroadcastTransform(string parent_frame, string child_frame, geometry_msgs::PoseStamped transformation);
+        void BroadcastTransform(string parent_frame, string child_frame, Eigen::Affine3d transformation);
 
     private:
         ros::NodeHandle nh_;
