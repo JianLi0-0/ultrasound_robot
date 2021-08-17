@@ -37,6 +37,10 @@ source activate py36 && python us_image_acquisition.py 1
 
 
 
+
+
+
+
 ## Slice-to-volume Registration
 
 #### 启动python代码，读取并发布图像
@@ -45,4 +49,15 @@ cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
 source activate py36 && python us_image_acquisition.py
 
 rosrun ultrasound_robot thyroid_biopsy
+```
+
+
+
+
+
+## Visual Servo: Aruco Marker Tracking
+```
+roslaunch ultrasound_robot ur5_real.launch
+roslaunch ultrasound_robot aruco_single_marker.launch
+rosrun ultrasound_robot visual_servo_test
 ```

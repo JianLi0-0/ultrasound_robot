@@ -63,7 +63,7 @@ size = [rospy.get_param("/svr/reconstruction_h"), rospy.get_param("/svr/reconstr
 # cv2.setMouseCallback("MyImage", onmouse)   #回调绑定窗口
 # (camera.width, camera.height): [1920,1080]
 
-camera = Camera('/dev/video1')
+camera = Camera('/dev/UltrasoundImage')
 if(camera.width!=1920): 
     print("camera.width is not 1280")
     exit(0)

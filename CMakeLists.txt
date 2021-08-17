@@ -48,7 +48,7 @@ include_directories( include/extended_kalman_filter )
 include_directories(/usr/include/python2.7)
 
 generate_dynamic_reconfigure_options(
-  cfg/force_controller.cfg
+  cfg/svr.cfg
 )
 
 add_service_files(
@@ -98,8 +98,11 @@ target_link_libraries(HelloInsight ${ITK_LIBRARIES})
 
 
 # interventional navigation
-add_executable(thyroid_biopsy src/thyroid_biopsy.cpp src/svr/ITKImgProcess.cpp src/svr/Optimization.cpp src/StatesHub.cpp src/ForceTorqueController.cpp src/CustomRosLib.cpp)
-target_link_libraries(thyroid_biopsy ${ITK_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+add_executable(thyroid_biopsy src/thyroid_biopsy.cpp src/svr/ITKImgProcess.cpp src/svr/Optimization.cpp src/StatesHub.cpp 
+  src/ForceTorqueController.cpp src/CustomRosLib.cpp src/visual_servo/VisualServo.cpp 
+  src/extended_kalman_filter/PoseKalmanFilter.cpp)
+target_link_libraries(thyroid_biopsy ${ITK_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${VISP_LIBRARIES})
+add_dependencies(thyroid_biopsy ${PROJECT_NAME}_gencfg)
 
 
 add_executable(visual_servo_test src/visual_servo/visual_servo_test src/visual_servo/VisualServo.cpp src/StatesHub.cpp src/CustomRosLib.cpp src/extended_kalman_filter/PoseKalmanFilter.cpp)
