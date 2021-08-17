@@ -102,7 +102,7 @@ add_executable(thyroid_biopsy src/thyroid_biopsy.cpp src/svr/ITKImgProcess.cpp s
 target_link_libraries(thyroid_biopsy ${ITK_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 
-add_executable(visual_servo_test src/visual_servo/visual_servo_test src/visual_servo/VisualServo.cpp src/StatesHub.cpp src/CustomRosLib.cpp)
+add_executable(visual_servo_test src/visual_servo/visual_servo_test src/visual_servo/VisualServo.cpp src/StatesHub.cpp src/CustomRosLib.cpp src/extended_kalman_filter/PoseKalmanFilter.cpp)
 target_link_libraries(visual_servo_test ${catkin_LIBRARIES} ${VISP_LIBRARIES})
 
 # kalman filter

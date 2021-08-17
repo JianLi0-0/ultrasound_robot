@@ -1,6 +1,7 @@
 #include "VisualServo.h"
 #include "StatesHub.h"
 #include "CustomRosLib.h"
+#include "PoseKalmanFilter.h"
 
 class VisualServoTest
 {
@@ -11,6 +12,7 @@ class VisualServoTest
 		geometry_msgs::PoseStamped marker_pose_;
 		VisualServo* visual_servo_;
 		CustomRosLib* custom_ros_lib_;
+		PoseKalmanFilter pkf;
 
     public:
         
@@ -56,6 +58,16 @@ void VisualServoTest::MainLoop()
 	// visual_servo_->set_lambda(0.5);
 	visual_servo_->set_lambda(0.4);
 
+	pkf.SetParammeters(1.0/30.0, 0.03, 2.0);
+	pkf.InitializeKalmanFilter();
+	Eigen::Affine3d X;
+	auto orient = marker_pose_.pose.orientation;
+	auto position = marker_pose_.pose.position;
+	X.setIdentity();
+	X.translate( Eigen::Vector3d( position.x, position.y, position.z ));
+	X.rotate( Eigen::Quaterniond( orient.w, orient.x, orient.y, orient.z ) );
+	pkf.SetInitialXhat(X);
+
 	ros::Rate rate(30);
 	while ( ros::ok() )
 	{
@@ -65,13 +77,16 @@ void VisualServoTest::MainLoop()
 		camera_to_object.translate( Eigen::Vector3d( position.x, position.y, position.z ));
 		camera_to_object.rotate( Eigen::Quaterniond( orient.w, orient.x, orient.y, orient.z ) );
 
-		auto joint_velocity = visual_servo_->PBVS1(camera_to_object, desired_camera_to_object);
+		pkf.UpdateState(camera_to_object);
+
+		auto joint_velocity = visual_servo_->PBVS1(pkf.GetEstimate(), desired_camera_to_object);
+		// auto joint_velocity = visual_servo_->PBVS1(camera_to_object, desired_camera_to_object);
 		// auto joint_velocity1 = visual_servo_->PBVS2(camera_to_object, desired_camera_to_object);
 
 		// exit(0);
+		custom_ros_lib_->BroadcastTransform("camera_color_optical_frame", "kf_marker", pkf.GetEstimate());
 		custom_ros_lib_->PublishJointVelocity(joint_velocity);
-
-		custom_ros_lib_->CheckBox(Eigen::Vector3d(0.5, -0.2, 0.24), Eigen::Vector3d(0.20, 0.20, 0.1));
+		custom_ros_lib_->CheckBox(Eigen::Vector3d(0.5, -0.25, 0.24), Eigen::Vector3d(0.20, 0.15, 0.1));
 		rate.sleep();
 	}
 }
