@@ -1,4 +1,4 @@
 .vscode
-include/svr/optim
 src/python/__pycache__
 src/python/*.mha
+include/svr/optim/.DS_Store
