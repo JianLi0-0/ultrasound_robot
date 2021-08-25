@@ -15,8 +15,8 @@ StatesHub::StatesHub(std::shared_ptr<SharedVariable> ptr)
     joint_model_group_ = kinematic_model_->getJointModelGroup("manipulator");
     shared_variable_ptr_->joint_names = joint_model_group_->getVariableNames();
 
-    Eigen::VectorXd force_torque(6);
-    shared_variable_ptr_->wrench = force_torque;
+    pkf_.SetParammeters(1.0/500.0, 0.1, 40.0);
+	pkf_.InitializeKalmanFilter();
 }
 
 StatesHub::~StatesHub()
@@ -29,8 +29,10 @@ void StatesHub::force_torque_sensor_callback(const geometry_msgs::WrenchStamped:
     Eigen::VectorXd force_torque(6);
     force_torque << msg->wrench.force.x, msg->wrench.force.y, msg->wrench.force.z,
         msg->wrench.torque.x, msg->wrench.torque.y, msg->wrench.torque.z;
+    pkf_.UpdateStateEulerAngle(force_torque);
     pthread_rwlock_wrlock(&shared_variable_ptr_->shared_variables_rwlock);
 	shared_variable_ptr_->wrench = force_torque;
+    shared_variable_ptr_->filtered_wrench = pkf_.GetEstimateState();
     pthread_rwlock_unlock(&shared_variable_ptr_->shared_variables_rwlock);
     // std::cout << "force_torque" << shared_variable_ptr_->force_torque << std::endl;
 

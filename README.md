@@ -1,3 +1,23 @@
+## Slice-to-volume Registration
+#### 启动机器人
+```
+roslaunch ultrasound_robot ur5_real.launch
+```
+
+#### 启动python代码，读取并发布图像
+```
+cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
+source activate py36 && python us_image_acquisition.py
+```
+
+#### 配准，导航
+```
+rosrun ultrasound_robot thyroid_biopsy
+rosrun rqt_reconfigure rqt_reconfigure
+```
+
+
+
 ## 超声3维重建图像采集
 
 同时启动下面三个程序
@@ -30,27 +50,11 @@ source activate py36 && python us_image_acquisition.py 1
 
 
 
-
-
-## Calibration
-#### see README file in the folder US_CALIBRATION
-
-
-
-
-
-
-
-## Slice-to-volume Registration
-
-#### 启动python代码，读取并发布图像
+## Force sensor calibration
 ```
-cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
-source activate py36 && python us_image_acquisition.py
-
-rosrun ultrasound_robot thyroid_biopsy
+roslaunch ultrasound_robot forece_sensor_calibration.launch
+roslaunch force_torque_sensor_calib example_ft_calib.launch
 ```
-
 
 
 

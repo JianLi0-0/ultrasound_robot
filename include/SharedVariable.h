@@ -8,6 +8,7 @@
 struct SharedVariable
 {
     Eigen::VectorXd wrench;
+    Eigen::VectorXd filtered_wrench;
     Eigen::VectorXd joint_states;
     Eigen::VectorXd joint_velocity;
     std::vector<std::string> joint_names;

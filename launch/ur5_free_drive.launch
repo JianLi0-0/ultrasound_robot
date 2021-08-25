@@ -24,5 +24,6 @@
 		name="ur_free_drive"
     output="screen"
 	/>
+  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0.195 0.0 0.0 0.0 0.0 0.0 ee_link probe 100" />  
 
 </launch>

@@ -3,15 +3,10 @@
 <arg name="robot_ip" default="192.168.1.75" />
 <arg name="limited" default="true" />
 
-  <!-- <include file="$(find realsense2_camera)/launch/rs_rgbd.launch"/> -->
-
-  <include file="$(find ultrasound_robot)/launch/force_sensor.launch"/>
-  <include file="$(find gravity_compensation)/launch/gravity_compensation.launch"/>
-
   <include file="$(find ur_modern_driver)/launch/ur5_ros_control.launch">
     <arg name="robot_ip" value="$(arg robot_ip)"/>
-    <arg name="controllers" default="pos_based_pos_traj_controller joint_state_controller"/>
-    <arg name="stopped_controllers" default="joint_group_vel_controller"/>
+    <arg name="controllers" default="joint_state_controller"/>
+    <arg name="stopped_controllers" default="joint_group_vel_controller pos_based_pos_traj_controller"/>
   </include>
 
   <include file="$(find ur5_moveit_config)/launch/move_group.launch">
@@ -23,10 +18,15 @@
     <arg name="config" value="true"/>
   </include>
 
-  <include file="$(find moveit_jog_arm)/launch/spacenav_cpp.launch" />
-
-  <!--x y z qx qy qz qw--> 
-  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0.195 0.0 0.0 -1.5707963267949 0.0 0.0 ee_link probe 100" />  
+  <include file="$(find ultrasound_robot)/launch/force_sensor.launch"/>
   
-  <!-- <include file="$(find ultrasound_robot)/launch/aruco_single_marker.launch" /> -->
+  <node
+		pkg="ultrasound_robot"
+		type="ur_free_drive.py"
+		name="ur_free_drive"
+    output="screen"
+	/>
+
+  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0.195 0.0 0.0 -1.5707963267949 0.0 0.0 ee_link probe 100" />  
+
 </launch>

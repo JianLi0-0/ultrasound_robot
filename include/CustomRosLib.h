@@ -16,6 +16,7 @@
 #include "SharedVariable.h"
 #include <control_msgs/JointJog.h>
 #include <controller_manager_msgs/ListControllers.h>
+#include "geometry_msgs/WrenchStamped.h"
 
 using namespace std;
 
@@ -39,10 +40,13 @@ class CustomRosLib
         void CheckBox(Eigen::Vector3d center, Eigen::Vector3d range);
         void BroadcastTransform(string parent_frame, string child_frame, geometry_msgs::PoseStamped transformation);
         void BroadcastTransform(string parent_frame, string child_frame, Eigen::Affine3d transformation);
+        void WrenchRvizDisplay(Eigen::VectorXd vel, string frame_name, double sacle);
+        void WrenchRvizDisplay2(Eigen::VectorXd vel, string frame_name, string topic_name, double sacle);
 
     private:
         ros::NodeHandle nh_;
         ros::Publisher pos_tra_controller_;
+        ros::Publisher wrench_display_pub_;
 
         // ros::Subscriber desired_pose_sub;
         std_msgs::Float64MultiArray home_angles_;

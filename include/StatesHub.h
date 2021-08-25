@@ -13,6 +13,7 @@
 #include <moveit/robot_state/robot_state.h>
 
 #include "SharedVariable.h"
+#include "PoseKalmanFilter.h"
 
 class StatesHub
 {
@@ -26,7 +27,7 @@ private:
     robot_state::JointModelGroup* joint_model_group_;
 
     std::shared_ptr<SharedVariable> shared_variable_ptr_;
-    // boost::property_tree::ptree config_tree_;
+    PoseKalmanFilter pkf_;
 
     
 public:

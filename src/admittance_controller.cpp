@@ -68,7 +68,8 @@ int main(int argc, char **argv)
         auto past = ros::Time::now();
         while((ros::Time::now()-past).toSec() < 2.0)
         {
-            auto jonit_velocity = ft_controller.ForceVelocityController(task_frame_pose, Eigen::VectorXd::Zero(6));
+            auto velocity_base_frame = ft_controller.ForceVelocityController(task_frame_pose, Eigen::VectorXd::Zero(6));
+            auto jonit_velocity = ft_controller.ToJointSpaceVelocity(velocity_base_frame);
             // auto jonit_velocity = ft_controller.ZeroMomentVelocityController();
             control_msgs::JointJog joint_deltas;
             for(int i = 0; i < 6; i++)

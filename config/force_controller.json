@@ -4,7 +4,7 @@
         "mass":             [1.0, 1.0, 1.0, 0.1, 0.1, 0.1],
         "damping_scaling" : [2.0, 2.0, 2.0, 2.0, 2.0, 2.0],
         "stiffness":        [0.4, 0.4, 0.4, 0.2, 0.2, 0.2],
-        "wrench_scaling": [0.01, 0.01, 0.01, 0.01, 0.01, 0.01],
+        "wrench_scaling": [0.01, 0.01, 0.01, 0.0, 0.0, 0.0],
         "stiffness000":        [10.0, 10.0, 10.0, 3.0, 3.0, 3.0],
         "wrench_scaling000": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         "static_target":
@@ -17,9 +17,9 @@
             "translation":[0.360, -0.084, 0.194],
             "quaternion": [0.040, 0.672, 0.324, 0.665]
         },
-        "expected_wrench": [-5, 0.0, 0.0, 0, 0, 0],
+        "expected_wrench": [-1, 0.0, 0.0, 0, 0, 0],
         "pose_epsilon": {"p": 0.005, "o": 0.01},
-        "ft_truncation": {"f": 3.3, "t": 0.5}
+        "ft_truncation": {"f": 0.4, "t": 0.018}
     },
     "delta_t" : 0.008,
     "joint_speed_limit": 0.8,

@@ -57,6 +57,7 @@ void VisualServoTest::MainLoop()
 
 	// visual_servo_->set_lambda(0.5);
 	visual_servo_->set_lambda(0.4);
+	visual_servo_->set_link_name_("ee_link", "camera_color_optical_frame");
 
 	pkf_.SetParammeters(1.0/30.0, 0.03, 2.0);
 	pkf_.InitializeKalmanFilter();
@@ -79,11 +80,13 @@ void VisualServoTest::MainLoop()
 
 		pkf_.UpdateState(camera_to_object);
 
-		auto joint_velocity = visual_servo_->PBVS1(pkf_.GetEstimate(), desired_camera_to_object);
+		auto velocity_base_frame = visual_servo_->PBVS1(pkf_.GetEstimate(), desired_camera_to_object);
+		auto joint_velocity = visual_servo_->ToJointSpaceVelocity(velocity_base_frame);
 		// auto joint_velocity = visual_servo_->PBVS1(camera_to_object, desired_camera_to_object);
 		// auto joint_velocity1 = visual_servo_->PBVS2(camera_to_object, desired_camera_to_object);
 
 		// exit(0);
+        custom_ros_lib_->WrenchRvizDisplay(velocity_base_frame, "base_link", 10);
 		custom_ros_lib_->BroadcastTransform("camera_color_optical_frame", "kf_marker", pkf_.GetEstimate());
 		custom_ros_lib_->PublishJointVelocity(joint_velocity);
 		custom_ros_lib_->CheckBox(Eigen::Vector3d(0.5, -0.25, 0.24), Eigen::Vector3d(0.20, 0.15, 0.1));

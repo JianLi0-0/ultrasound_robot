@@ -44,6 +44,13 @@ void PoseKalmanFilter::UpdateState(const Eigen::Affine3d& pose)
     kf_->updateState({0}, arma_y.as_col());
 }
 
+void PoseKalmanFilter::UpdateStateEulerAngle(const Eigen::VectorXd& position_euler_angle)
+{
+    auto y = position_euler_angle;
+    arma::mat arma_y = {y(0), y(1), y(2), y(3), y(4), y(5)};
+    kf_->updateState({0}, arma_y.as_col());
+}
+
 Eigen::Affine3d PoseKalmanFilter::GetEstimate()
 {
     Eigen::Affine3d output;
@@ -56,6 +63,35 @@ Eigen::Affine3d PoseKalmanFilter::GetEstimate()
     output.linear() = angle_axisd.toRotationMatrix();
     // std::cout << "arma_x_hat: " << std::endl << arma_x_hat << std::endl;
     // std::cout << "output: " << std::endl << output.matrix() << std::endl;
+    return output;
+}
+
+Eigen::VectorXd PoseKalmanFilter::GetEstimateState()
+{
+    auto arma_x_hat = kf_->getEstimate();
+    Eigen::VectorXd output(6);
+    output << arma_x_hat(0), arma_x_hat(1), arma_x_hat(2), arma_x_hat(3), arma_x_hat(4), arma_x_hat(5);
+    return output;
+}
+
+Eigen::Affine3d PoseKalmanFilter::GetEstimateFromEluerAngle()
+{
+    auto arma_x_hat = kf_->getEstimate();
+    Eigen::VectorXd position_euler_angle(6);
+    position_euler_angle << arma_x_hat(0), arma_x_hat(1), arma_x_hat(2), arma_x_hat(3), arma_x_hat(4), arma_x_hat(5);
+    Eigen::Affine3d output = Position_Eluer_Angle_To_Affine3d(position_euler_angle);
+    return output;
+}
+
+Eigen::VectorXd PoseKalmanFilter::NextStatePrediction(const double prediction_time)
+{
+    Eigen::VectorXd output;
+    auto arma_x_hat = kf_->getEstimate();
+    Eigen::VectorXd state(6);
+    Eigen::VectorXd state_dot(6);
+    state << arma_x_hat(0), arma_x_hat(1), arma_x_hat(2), arma_x_hat(3), arma_x_hat(4), arma_x_hat(5);
+    state_dot <<arma_x_hat(6), arma_x_hat(7), arma_x_hat(8), arma_x_hat(9), arma_x_hat(10), arma_x_hat(11);
+    output = state + prediction_time * state_dot;
     return output;
 }
 
@@ -73,4 +109,29 @@ void PoseKalmanFilter::SetInitialXhat(const Eigen::Affine3d& X)
     auto y = FromeMatrixToErrorAxisAngle(X);
     arma::mat arma_y = {y(0), y(1), y(2), y(3), y(4), y(5), 0, 0, 0, 0, 0, 0};
     kf_->setEstimate(arma_y.as_col());
+}
+
+void PoseKalmanFilter::SetInitialXhatEluerAngle(const Eigen::VectorXd& position_euler_angle)
+{
+    auto y = position_euler_angle;
+    arma::mat arma_y = {y(0), y(1), y(2), y(3), y(4), y(5), 0, 0, 0, 0, 0, 0};
+    kf_->setEstimate(arma_y.as_col());
+}
+
+Eigen::Affine3d PoseKalmanFilter::Position_Eluer_Angle_To_Affine3d(const Eigen::VectorXd& position_euler_angle)
+{
+    // ZYX
+    Eigen::Affine3d X = Eigen::Affine3d::Identity();
+	X.translate( Eigen::Vector3d( position_euler_angle(0), position_euler_angle(1), position_euler_angle(2) ));
+	X.rotate( Eigen::Quaterniond( Eigen::AngleAxisd(position_euler_angle(3),Eigen::Vector3d::UnitX()) * 
+                                Eigen::AngleAxisd(position_euler_angle(4),Eigen::Vector3d::UnitY()) *
+                                Eigen::AngleAxisd(position_euler_angle(5),Eigen::Vector3d::UnitZ())  ) );
+
+    return X;
+}
+
+Eigen::VectorXd PoseKalmanFilter::Position_Axis_Angle_To_Position_Eluer_Angle(const Eigen::VectorXd& position_axis_angle)
+{
+    Eigen::VectorXd vecX(6);
+    return vecX;
 }

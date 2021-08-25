@@ -17,7 +17,24 @@ CustomRosLib::CustomRosLib(std::shared_ptr<SharedVariable> ptr): joint_seed_(6),
     ik_solver_("base_link", "ee_link", "/robot_description", 0.008, 1e-5, TRAC_IK::Distance)
 {
     // set up publisher and subscriber
-    pos_tra_controller_ = nh_.advertise<trajectory_msgs::JointTrajectory>("/pos_based_pos_traj_controller/command", 1);
+    string controller_name;
+    ros::ServiceClient list_controllers_client = nh_.serviceClient<controller_manager_msgs::ListControllers>("/controller_manager/list_controllers");
+    controller_manager_msgs::ListControllers list_controllers_srv;
+    if(list_controllers_client.call(list_controllers_srv))
+    {
+        auto controller_lists = list_controllers_srv.response.controller;
+        for(auto controller = controller_lists.begin();controller!=controller_lists.end();controller++)
+        {
+            if(controller->name ==  "pos_based_pos_traj_controller" || controller->name ==  "vel_based_pos_traj_controller")
+            {
+                controller_name = controller->name;
+                ROS_INFO("The pos controller %s is running", controller->name.c_str());
+                break;
+            }
+        }
+    }
+    pos_tra_controller_ = nh_.advertise<trajectory_msgs::JointTrajectory>("/"+controller_name+"/command", 1);
+    wrench_display_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/servo_vel_display", 1);
     // variables initialization
     for(int i=0;i<6;i++){
         // home_angles_.data.push_back(json_joint_angle[i].asDouble());
@@ -30,11 +47,6 @@ CustomRosLib::CustomRosLib(std::shared_ptr<SharedVariable> ptr): joint_seed_(6),
 }
 
 CustomRosLib::~CustomRosLib() {}
-
-// {
-//     JointPositionControl(home_angles_.data, 3.0);
-// }
-
 
 bool CustomRosLib::CartesianPositionControl(geometry_msgs::Pose target_position, double duration, double delay)
 {
@@ -264,4 +276,36 @@ void CustomRosLib::BroadcastTransform(string parent_frame, string child_frame, E
     transform.setOrigin( tf::Vector3(position(0,0), position(1,0), position(2,0)) );
     transform.setRotation( tf::Quaternion(orient.x(), orient.y(), orient.z(), orient.w()) );
     br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), parent_frame, child_frame));
+}
+
+void CustomRosLib::WrenchRvizDisplay(Eigen::VectorXd vel, string frame_name, double sacle)
+{
+    geometry_msgs::WrenchStamped wrench;
+    wrench.header.frame_id = frame_name;
+    wrench.header.stamp = ros::Time::now();
+    vel = vel * sacle;
+    wrench.wrench.force.x = vel(0);
+    wrench.wrench.force.y = vel(1);
+    wrench.wrench.force.z = vel(2);
+    wrench.wrench.torque.x = vel(3);
+    wrench.wrench.torque.y = vel(4);
+    wrench.wrench.torque.z = vel(5);
+    wrench_display_pub_.publish(wrench);
+}
+
+void CustomRosLib::WrenchRvizDisplay2(Eigen::VectorXd vel, string frame_name, string topic_name, double sacle)
+{
+    static ros::Publisher wrench_display_pub;
+    wrench_display_pub = nh_.advertise<geometry_msgs::WrenchStamped>(topic_name, 1);
+    geometry_msgs::WrenchStamped wrench;
+    wrench.header.frame_id = frame_name;
+    wrench.header.stamp = ros::Time::now();
+    vel = vel * sacle;
+    wrench.wrench.force.x = vel(0);
+    wrench.wrench.force.y = vel(1);
+    wrench.wrench.force.z = vel(2);
+    wrench.wrench.torque.x = vel(3);
+    wrench.wrench.torque.y = vel(4);
+    wrench.wrench.torque.z = vel(5);
+    wrench_display_pub.publish(wrench);
 }

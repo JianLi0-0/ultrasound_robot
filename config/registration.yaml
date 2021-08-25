@@ -1,4 +1,4 @@
-initial_pose: [1.1, -3.1, 4.1, -0.1, 0.1, 0.1]
+initial_pose: [-2.9390299955951136, 4.467770099639893, -2.0377872625934046, -0.9225037733661097, 1.416887879371643, 0.15516576170921326]
 frame_id: probe
 
 # Strating point of the ultrasound image
@@ -21,3 +21,12 @@ servo_w: 150
 servo_h: 150
 spacing: 0.0872865 # 46.0/527.0
 volume_resol_reduction: 3
+
+target_tx: 45
+target_ty: 8.4
+target_tz: 40
+target_rx: 0.096
+target_ry: 1.5708
+target_rz: 0.0
+
+visual_servo_lamda: 0.2
