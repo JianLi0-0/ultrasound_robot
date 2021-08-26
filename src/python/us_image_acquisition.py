@@ -95,7 +95,7 @@ while rospy.is_shutdown() is False:
         
         cv2.rectangle(gray, (servo_starting_point[1], servo_starting_point[0]), (servo_starting_point[1]+servo_size[1]*reduction, servo_starting_point[0]+servo_size[0]*reduction), 255, 2)
         cropped2 = crop_image(gray, starting_point, size)
-        cv2.imshow('servo', np.asarray(cropped2))
+        # cv2.imshow('servo', np.asarray(cropped2))
         if cv2.waitKey(1) & 0xFF == ord('q'):
             cv2.destroyAllWindows()
             break

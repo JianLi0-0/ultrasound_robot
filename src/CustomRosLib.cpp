@@ -292,20 +292,3 @@ void CustomRosLib::WrenchRvizDisplay(Eigen::VectorXd vel, string frame_name, dou
     wrench.wrench.torque.z = vel(5);
     wrench_display_pub_.publish(wrench);
 }
-
-void CustomRosLib::WrenchRvizDisplay2(Eigen::VectorXd vel, string frame_name, string topic_name, double sacle)
-{
-    static ros::Publisher wrench_display_pub;
-    wrench_display_pub = nh_.advertise<geometry_msgs::WrenchStamped>(topic_name, 1);
-    geometry_msgs::WrenchStamped wrench;
-    wrench.header.frame_id = frame_name;
-    wrench.header.stamp = ros::Time::now();
-    vel = vel * sacle;
-    wrench.wrench.force.x = vel(0);
-    wrench.wrench.force.y = vel(1);
-    wrench.wrench.force.z = vel(2);
-    wrench.wrench.torque.x = vel(3);
-    wrench.wrench.torque.y = vel(4);
-    wrench.wrench.torque.z = vel(5);
-    wrench_display_pub.publish(wrench);
-}

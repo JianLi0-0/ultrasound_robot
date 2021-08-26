@@ -41,7 +41,6 @@ class CustomRosLib
         void BroadcastTransform(string parent_frame, string child_frame, geometry_msgs::PoseStamped transformation);
         void BroadcastTransform(string parent_frame, string child_frame, Eigen::Affine3d transformation);
         void WrenchRvizDisplay(Eigen::VectorXd vel, string frame_name, double sacle);
-        void WrenchRvizDisplay2(Eigen::VectorXd vel, string frame_name, string topic_name, double sacle);
 
     private:
         ros::NodeHandle nh_;
@@ -59,6 +58,34 @@ class CustomRosLib
         std::shared_ptr<SharedVariable> shared_variable_ptr_;
         vector<string> joints_name_;
         ros::Publisher jog_vel_pub_;
+};
+
+class WrenchRvizDisplay
+{
+    public:
+        WrenchRvizDisplay(string topic_name)
+        {
+            wrench_display_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>(topic_name, 1);
+        }
+        virtual ~WrenchRvizDisplay(){}
+        void Display(Eigen::VectorXd vel, string frame_name, double sacle)
+        {
+            geometry_msgs::WrenchStamped wrench;
+            wrench.header.frame_id = frame_name;
+            wrench.header.stamp = ros::Time::now();
+            vel = vel * sacle;
+            wrench.wrench.force.x = vel(0);
+            wrench.wrench.force.y = vel(1);
+            wrench.wrench.force.z = vel(2);
+            wrench.wrench.torque.x = vel(3);
+            wrench.wrench.torque.y = vel(4);
+            wrench.wrench.torque.z = vel(5);
+            wrench_display_pub_.publish(wrench);
+        }
+
+    private:
+        ros::NodeHandle nh_;
+        ros::Publisher wrench_display_pub_;
 };
 
 #endif

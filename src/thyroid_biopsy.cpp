@@ -55,6 +55,7 @@ class ThyroidBiopsy
         ros::Time registration_time_stamp_;
         std::vector<double> initial_joint_angle_;
         bool end_control_ = false;
+        bool start_navigation_ = false;
 
         sensor_msgs::Image us_image_;
         VolumeType::Pointer probe_itk_us_image_, itk_us_image_,taget_slice_;
@@ -100,7 +101,9 @@ control_thread_(&ThyroidBiopsy::ControlLoop, this)
     custom_ros_lib_ = new CustomRosLib(shared_variable_ptr_);
 	visual_servo_ = new VisualServo(shared_variable_ptr_);
     double lamda; nh_.getParam("/svr/visual_servo_lamda", lamda);
+    double rotation_lamda; nh_.getParam("/svr/visual_servo_rotation_lamda", rotation_lamda);
 	visual_servo_->set_lambda(lamda);
+	visual_servo_->set_rotation_lambda(rotation_lamda);
     visual_servo_->set_link_name_("ee_link", "probe");
 
     nh_.getParam("/svr/servo_w", slice_width_);
@@ -174,8 +177,8 @@ void ThyroidBiopsy::RobotInitialization()
     custom_ros_lib_->JointPositionControl(initial_joint_angle_, 3.0);
     custom_ros_lib_->SwitchController("pos_based_pos_traj_controller", "joint_group_vel_controller");
     force_controller_->UpdateZeroWrench();
-    force_controller_->Approach(-0.1, 0.005);
-    ros::Duration(1.0).sleep();
+    force_controller_->Approach(-0.3, 0.005);
+    // ros::Duration(1.0).sleep();
 }
 
 void ThyroidBiopsy::MainLoop()
@@ -222,6 +225,9 @@ void ThyroidBiopsy::MainLoop()
 
 void ThyroidBiopsy::ControlLoop()
 {
+    WrenchRvizDisplay rivz_visual_sevo("/vel_visual_servo");
+    WrenchRvizDisplay rivz_ft("/vel_ft");
+
     ros::Rate rate(200);
     while(ros::ok() && is_registration_successful_ == false) {rate.sleep();};
     std::cout << "Start control loop." << std::endl;
@@ -229,15 +235,20 @@ void ThyroidBiopsy::ControlLoop()
     {
         auto time_interval = ros::Time::now() - registration_time_stamp_;
         auto current_slice_pose = pkf_.Position_Eluer_Angle_To_Affine3d(pkf_.NextStatePrediction( time_interval.toSec() ));
+        // auto current_slice_pose = pkf_.GetEstimateFromEluerAngle();
         auto probe_to_target = current_slice_pose.inverse() * target_slice_pose_;
-		auto velocity_base_visual_servo_ = visual_servo_->PBVS1(MmToM(probe_to_target), Eigen::Affine3d::Identity());
+		auto velocity_base_visual_servo_ = visual_servo_->PBVS_TR(MmToM(probe_to_target), Eigen::Affine3d::Identity());
 		auto velocity_base_frame_ft_ = force_controller_->ForceVelocityController(force_controller_->get_base_2_end_effector(), expected_wrench_);
-        // auto jonit_velocity = visual_servo_->ToJointSpaceVelocity(velocity_base_frame_ft_);
+        
+        custom_ros_lib_->BroadcastTransform("probe", "target_slice", MmToM(probe_to_target));
+        rivz_visual_sevo.Display(velocity_base_visual_servo_, "base_link", 10);
+        rivz_ft.Display(velocity_base_frame_ft_, "base_link", 10);
+
+        if(!start_navigation_) 
+            velocity_base_visual_servo_ = Eigen::VectorXd::Zero(6);
+        
         auto jonit_velocity = visual_servo_->ToJointSpaceVelocity(velocity_base_visual_servo_ + velocity_base_frame_ft_);
         
-        custom_ros_lib_->WrenchRvizDisplay(velocity_base_visual_servo_, "base_link", 10);
-        custom_ros_lib_->BroadcastTransform("probe", "target_slice", MmToM(probe_to_target));
-
         custom_ros_lib_->PublishJointVelocity(jonit_velocity);
         rate.sleep();
         if(end_control_) break;
@@ -271,6 +282,9 @@ void ThyroidBiopsy::DisplayComparisonLoop()
             {
                 end_control_ = true;
             }
+            else if(key == 'a') start_navigation_ = true;
+            else if(key == 't') visual_servo_->set_lambda(visual_servo_->get_lambda() + 0.05);
+            else if(key == 'r') visual_servo_->set_rotation_lambda(visual_servo_->get_rotation_lambda() + 0.01);
         }
         rate.sleep();
     }
