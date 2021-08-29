@@ -1,0 +1,4 @@
+bool command
+---
+std_msgs/Float64MultiArray angle_position
+bool is_successful

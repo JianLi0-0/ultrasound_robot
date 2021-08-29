@@ -22,14 +22,17 @@ servo_h: 150
 spacing: 0.0872865 # 46.0/527.0
 volume_resol_reduction: 3
 
-target_tx: 47.2
-target_ty: 8.4
-target_tz: 43
+target_tx: 42.2
+target_ty: 7.5
+target_tz: 40
 target_rx: 0.096
-target_ry: 1.0708
+target_ry: 1.1708
 target_rz: 0.0
 
 visual_servo_lamda: 0.1
 visual_servo_rotation_lamda: 0.1
 
 test: [0,0.0,0,0,0.05,0]
+
+nm_rel_x_change_tol: 0.001
+nm_rel_obj_change_tol: 0.001

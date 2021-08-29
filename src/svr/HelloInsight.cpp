@@ -25,7 +25,7 @@ int main(int, char * argv[])
     using ReaderType = itk::ImageFileReader<VolumeType>;
     ReaderType::Pointer reader = ReaderType::New();
     // const char * filename = argv[1];
-    reader->SetFileName("/home/sunlab/Desktop/SVR/program/data/volumen/thyroid.mhd");
+    reader->SetFileName("/home/kuka/SVR/program/data/volumen/thyroid.mhd");
     reader->Update();
 
     TransformType::Pointer transformation = TransformType::New();
@@ -108,7 +108,7 @@ int main(int, char * argv[])
     cout << "Ground Truth: \n " << optimization.ITKTransformToEigen(transformation) << endl;
     TransformType::Pointer stored_ground_truth = TransformType::New();
     stored_ground_truth->SetParameters(transformation->GetParameters());
-    t[0] = 16; t[1] = 6; t[2] = 42;  transformation->SetRotation(0.111,0.121,0.131);
+    t[0] = 16; t[1] = 5; t[2] = 40;  transformation->SetRotation(0.11,0.12,0.13);
     transformation->SetTranslation(t);
     initialTransform =  optimization.ITKTransformToEigen(transformation);
     cout << "initialTransform: \n " << initialTransform << endl;
@@ -116,17 +116,18 @@ int main(int, char * argv[])
     auto V4 = ExtractSliceFromVolume(volume, optimization.EigenToITKTransform(initialTransform), sliceWidth, sliceHeight, spacing);
     
     std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
-    auto success = optimization.Optimize(goalSlice, initialTransform);
+    auto success = optimization.Optimize(goalSlice, initialTransform, 1E-3, 1E-3);
     std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_seconds = end-start;
     
     if (success) {
-        std::cout << "Registration successfully.\n"
-                  << "elapsed time: " << elapsed_seconds.count() << "s\n"
-                  << "errors: \n" << initialTransform - optimization.ITKTransformToEigen(stored_ground_truth) << std::endl;
+        std::cout << "Registration successfully.\n";
+        std::cout << "elapsed time: " << elapsed_seconds.count() << "s\n"
+                << "errors: \n" << initialTransform - optimization.ITKTransformToEigen(stored_ground_truth) << std::endl;
     } else {
         std::cout << "Failed." << std::endl;
     }
+
     std::cout << "\n solution :\n" << initialTransform << std::endl;
 
     auto V3 = ExtractSliceFromVolume(volume, optimization.EigenToITKTransform(initialTransform), sliceWidth, sliceHeight, spacing);

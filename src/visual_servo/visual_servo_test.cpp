@@ -86,7 +86,7 @@ void VisualServoTest::MainLoop()
 		// exit(0);
         custom_ros_lib_->WrenchRvizDisplay(velocity_base_frame, "base_link", 1);
 		custom_ros_lib_->BroadcastTransform("camera_color_optical_frame", "kf_marker", pkf_.GetEstimate());
-		// custom_ros_lib_->PublishJointVelocity(joint_velocity);
+		custom_ros_lib_->PublishJointVelocity(joint_velocity);
 		custom_ros_lib_->CheckBox(Eigen::Vector3d(0.5, -0.25, 0.24), Eigen::Vector3d(0.20, 0.15, 0.1));
 		rate.sleep();
 	}

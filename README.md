@@ -6,10 +6,14 @@ roslaunch ultrasound_robot ur5_real.launch
 
 #### 启动python代码，读取并发布图像
 ```
-cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
-source activate py36 && python us_image_acquisition.py
+cd /home/kuka/lee_ws/src/ultrasound_robot/src/python
+conda activate base && python us_image_acquisition.py
 ```
-
+#### 启动Bayesian SVR ROS Service
+```
+cd /home/kuka/SVR/Slice_to_Volume_Registration_Python
+conda activate base && python BayesianSVR.py
+```
 #### 配准，导航
 ```
 rosrun ultrasound_robot thyroid_biopsy
@@ -33,7 +37,7 @@ rosrun ultrasound_robot us_image_acquisition
 
 #### 启动python代码（接收图像和tf，生成.mha）
 ```
-cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
+cd /home/kuka/lee_ws/src/ultrasound_robot/src/python
 source activate py36 && python us_image_acquisition.py 2
 ```
 
@@ -43,7 +47,7 @@ source activate py36 && python us_image_acquisition.py 2
 
 ## 查看超声图像起始点、高度和宽度
 ```
-cd /home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python
+cd /home/kuka/lee_ws/src/ultrasound_robot/src/python
 source activate py36 && python us_image_acquisition.py 1
 ```
 

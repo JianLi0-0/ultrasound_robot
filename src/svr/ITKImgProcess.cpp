@@ -174,7 +174,7 @@ double SSD4(VolumeType::Pointer imageOne, VolumeType::Pointer imageTwo)
         auto temp = *(it_1+i) - *(it_2+i);
         sum += temp * temp;
     }
-    cout << "no omp ";
+    // cout << "no omp ";
     return double(sum);
 }
 

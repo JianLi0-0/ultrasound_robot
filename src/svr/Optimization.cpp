@@ -65,7 +65,7 @@ double Optimization::SimilaritySSDFcn(const Eigen::VectorXd& x, Eigen::VectorXd*
     auto transformation = this->EigenToITKTransform(x);
     auto tempSlice = ExtractSliceFromVolume(this->volume, transformation, this->sliceWidth, this->sliceHeight, this->outputSpacing);
     // auto metric = SumOfSquaredDifferences(this->slice, tempSlice, this->sliceWidth, this->sliceHeight);
-    auto metric = SSD3(this->slice, tempSlice);
+    auto metric = SSD4(this->slice, tempSlice);
 
     // std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
     // std::chrono::duration<double> elapsed_seconds = end-start;
@@ -79,11 +79,14 @@ double Optimization::SimilaritySSDFcn(const Eigen::VectorXd& x, Eigen::VectorXd*
 //     return 0;
 // }
 
-bool Optimization::Optimize(VolumeType::Pointer goalSlice, Eigen::VectorXd& initialTransform)
+bool Optimization::Optimize(VolumeType::Pointer goalSlice, Eigen::VectorXd& initialTransform, double rel_sol_change_tol, double rel_obj_change_tol)
 {
+    optim::algo_settings_t settings;
+    settings.rel_sol_change_tol = rel_sol_change_tol;
+    settings.rel_objfn_change_tol = rel_obj_change_tol;
     slice = goalSlice;
     std::function<double(const Eigen::VectorXd&,Eigen::VectorXd*,void*)> func = std::bind(&Optimization::SimilaritySSDFcn, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-    bool success = optim::nm(initialTransform, func, nullptr);
+    bool success = optim::nm(initialTransform, func, nullptr, settings);
     return success;
 }
 

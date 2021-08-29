@@ -155,7 +155,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
     
     pt::ptree root;
-	pt::read_json("/home/sunlab/Desktop/lee_ws/src/ultrasound_robot/config/force_controller.json", root);
+	pt::read_json("src/ultrasound_robot/config/force_controller.json", root);
     
     std::shared_ptr<SharedVariable> shared_variable_ptr = std::make_shared<SharedVariable>();
     shared_variable_ptr->config_tree = root;

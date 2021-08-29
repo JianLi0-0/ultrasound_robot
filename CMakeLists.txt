@@ -31,7 +31,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(OpenCV 3 REQUIRED)
 find_package(VISP REQUIRED)
 
-SET(ITK_DIR "/home/sunlab/Desktop/SVR/ITK/build")
+SET(ITK_DIR "/home/kuka/SVR/ITK/build")
 find_package(ITK REQUIRED)
 include(${ITK_USE_FILE})
 include_directories( include/svr/optim )
@@ -39,9 +39,9 @@ include_directories( include/svr/itk_img )
 include_directories( include/svr/optimization )
 include_directories( include/svr/optimization )
 include_directories( include/visual_servo )
-include_directories( /home/sunlab/Desktop/SVR/eigen )
+include_directories( include/eigen )
 
-set(ARMADILLO_INCLUDE_DIR /home/sunlab/Desktop/SVR/armadillo/include)
+set(ARMADILLO_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/armadillo/include)
 find_package(Armadillo REQUIRED)
 include_directories(${ARMADILLO_INCLUDE_DIRS})
 include_directories( include/extended_kalman_filter )
@@ -54,6 +54,7 @@ generate_dynamic_reconfigure_options(
 add_service_files(
   FILES
   wipe_bb.srv
+  bayesian_svr.srv
 )
 
 generate_messages(

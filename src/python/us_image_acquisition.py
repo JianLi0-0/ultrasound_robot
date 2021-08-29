@@ -11,6 +11,20 @@ import UltrasoundProcess
 import transformations as tf
 from scipy.spatial.transform import Rotation as R
 
+import struct
+import redis
+
+r = redis.Redis(host='localhost', port=6379, db=0)
+def toRedis(r, img, key):
+    """Store given Numpy array 'a' in Redis under key 'n'"""
+    h, w = img.shape[:2]
+    shape = struct.pack('>II',h,w)
+    encoded = shape + img.tobytes()
+
+    # Store encoded data in Redis
+    r.set(key, encoded)
+    return
+
 if len(sys.argv) == 1:
     mode = "servo"
 elif sys.argv[1]=='1':
@@ -90,12 +104,13 @@ while rospy.is_shutdown() is False:
         try:
             ros_img = bridge.cv2_to_imgmsg(resized, encoding="passthrough")
             us_img_publisher.publish(ros_img)
+            toRedis(r, resized, 'image')
         except CvBridgeError as e:
             print(e)
         
         cv2.rectangle(gray, (servo_starting_point[1], servo_starting_point[0]), (servo_starting_point[1]+servo_size[1]*reduction, servo_starting_point[0]+servo_size[0]*reduction), 255, 2)
         cropped2 = crop_image(gray, starting_point, size)
-        # cv2.imshow('servo', np.asarray(cropped2))
+        cv2.imshow('servo', np.asarray(cropped2))
         if cv2.waitKey(1) & 0xFF == ord('q'):
             cv2.destroyAllWindows()
             break

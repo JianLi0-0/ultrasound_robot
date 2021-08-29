@@ -26,7 +26,7 @@ class Optimization
         TransformType::Pointer EigenToITKTransform(const Eigen::VectorXd eigenVec);
         Eigen::VectorXd ITKTransformToEigen(const TransformType::Pointer tf);
         double SimilaritySSDFcn(const Eigen::VectorXd& x, Eigen::VectorXd* grad_out, void* opt_data);
-        bool Optimize(VolumeType::Pointer goalSlice, Eigen::VectorXd& initialTransform);
+        bool Optimize(VolumeType::Pointer goalSlice, Eigen::VectorXd& initialTransform, double rel_sol_change_tol, double rel_obj_change_tol);
         void SetSliceSize(float width, float height);
 };
 

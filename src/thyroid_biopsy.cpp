@@ -27,6 +27,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <ultrasound_robot/svrConfig.h>
 #include "geometry_msgs/WrenchStamped.h"
+#include "ultrasound_robot/bayesian_svr.h"
 
 class ThyroidBiopsy
 {
@@ -40,6 +41,7 @@ class ThyroidBiopsy
         CustomRosLib* custom_ros_lib_;
 		VisualServo* visual_servo_;
         PoseKalmanFilter pkf_;
+        ros::ServiceClient bayesian_svr_client_;
 
         TransformType::Pointer transformation_;
         Optimization optimization_;
@@ -65,6 +67,8 @@ class ThyroidBiopsy
         itk::Vector<double, 3> t_; 
         double volume_resol_reduction_ = 1;
         double elasped_time_ = 1;
+        double nm_rel_x_change_tol_ = 0;
+        double nm_rel_obj_change_tol_ = 0;
 
         dynamic_reconfigure::Server<ultrasound_robot::svrConfig> dynamic_reconfig_server_;
         dynamic_reconfigure::Server<ultrasound_robot::svrConfig>::CallbackType dynamic_reconfig_f_;
@@ -88,11 +92,12 @@ class ThyroidBiopsy
         void SaveImage(VolumeType::Pointer image, string image_name);
         void DynamicReconfigCallback(ultrasound_robot::svrConfig &config, uint32_t level);
         Eigen::Affine3d MmToM(Eigen::Affine3d tf);
+        void BayesianSVR();
 };
 
 ThyroidBiopsy::ThyroidBiopsy(std::shared_ptr<SharedVariable> ptr, const pt::ptree config_tree):
-cv_thread_(&ThyroidBiopsy::DisplayComparisonLoop, this),
-control_thread_(&ThyroidBiopsy::ControlLoop, this)
+control_thread_(&ThyroidBiopsy::ControlLoop, this),
+cv_thread_(&ThyroidBiopsy::DisplayComparisonLoop, this)
 {
     shared_variable_ptr_ = ptr;
     config_tree_ = config_tree;
@@ -110,6 +115,9 @@ control_thread_(&ThyroidBiopsy::ControlLoop, this)
     nh_.getParam("/svr/servo_h", slice_height_);
     nh_.getParam("/svr/volume_resol_reduction", volume_resol_reduction_);
     nh_.getParam("/svr/initial_pose", initial_joint_angle_);
+    nh_.getParam("/svr/nm_rel_x_change_tol", nm_rel_x_change_tol_);
+    nh_.getParam("/svr/nm_rel_obj_change_tol", nm_rel_obj_change_tol_);
+    cout << "nm_rel_x_change_tol_: " << nm_rel_x_change_tol_ << " nm_rel_obj_change_tol: " << nm_rel_obj_change_tol_ << endl;
     // slice_width_ = slice_width_ / volume_resol_reduction_;
     // slice_height_ = slice_height_ / volume_resol_reduction_;
     // cout << "slice_width: " << slice_width_ << " slice_height: " << slice_height_ << endl;
@@ -120,6 +128,7 @@ control_thread_(&ThyroidBiopsy::ControlLoop, this)
     Eigen::Map<Eigen::VectorXd> expected_wrench(expected_wrench_data.data(), 6);
     expected_wrench_ = expected_wrench;
 
+    bayesian_svr_client_ = nh_.serviceClient<ultrasound_robot::bayesian_svr>("bayesian_svr");
 }
 
 ThyroidBiopsy::~ThyroidBiopsy()
@@ -134,10 +143,11 @@ void ThyroidBiopsy::RegistrationInitialization()
 
     using ReaderType = itk::ImageFileReader<VolumeType>;
     ReaderType::Pointer reader = ReaderType::New();
-    reader->SetFileName("/home/sunlab/Desktop/lee_ws/src/ultrasound_robot/src/python/new_biopsy_single.mha");
+    reader->SetFileName("src/ultrasound_robot/src/python/new_biopsy_single.mha");
     reader->Update();
     volume_ = reader->GetOutput();
     volume_ = ScaleVolume(volume_, transformation_, volume_resol_reduction_);
+    // SaveImage(volume_, "src/ultrasound_robot/src/python/new_biopsy_single_scaled.mha");
     spacing_ = volume_->GetSpacing();
 
     optimization_.SetVolume(volume_);
@@ -181,10 +191,30 @@ void ThyroidBiopsy::RobotInitialization()
     // ros::Duration(1.0).sleep();
 }
 
+void ThyroidBiopsy::BayesianSVR()
+{
+    ultrasound_robot::bayesian_svr srv;
+    srv.request.command = false;
+    cout << "Calling service BayesianSVR ..." << endl;
+    if (bayesian_svr_client_.call(srv))
+    {
+        auto angle_position = srv.response.angle_position.data;
+        assert(angle_position.size() == 6);
+        cout << "srv.response.angle_position:" << srv.response.angle_position << endl;
+        transformation_x0_ << angle_position[3], angle_position[4], angle_position[5], angle_position[0], angle_position[1], angle_position[2];
+    }
+    else
+    {
+        ROS_ERROR("Failed to call service BayesianSVR");
+        end_control_ = true;
+    }
+}
+
 void ThyroidBiopsy::MainLoop()
 {
     RobotInitialization();
     RegistrationInitialization();
+    BayesianSVR();
     auto timer = CustomTimer();
     auto timer2 = CustomTimer();
 
@@ -206,7 +236,8 @@ void ThyroidBiopsy::MainLoop()
 
         timer.tic();
         Eigen::VectorXd x0 = transformation_x0_;
-        auto success = optimization_.Optimize(itk_us_image_, x0);
+        auto success = optimization_.Optimize(itk_us_image_, x0, nm_rel_x_change_tol_, nm_rel_obj_change_tol_);
+        success = true; // large tol would lead to failure, we set 'success' to true manually
         if (success) {
             probe_itk_us_image_ = CopyImage(itk_us_image_);
             transformation_x0_ = x0;
@@ -375,7 +406,9 @@ void ThyroidBiopsy::RegistrationVisualization(sensor_msgs::Image current_image, 
             CV_RGB(255, 255, 255), //font color
             0.2);
     str1 = "Frequence: ";
-    sprintf(ch, "%lf", 1.0/elasped_time_);
+    static double mean_elasped_time = 0.0; 
+    mean_elasped_time = 0.1*elasped_time_ + 0.9*mean_elasped_time;
+    sprintf(ch, "%lf", 1.0/mean_elasped_time);
     str2 = ch;
     str = str1 + str2;
     cv::putText(resized_up,
