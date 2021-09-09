@@ -88,7 +88,7 @@ void UltrasoundCalibration::MainLoop()
     geometry_msgs::Pose target_position;
     geometry_msgs::PoseArray target_pose_array;
     
-    for(int i=0;i<6;i++)
+    for(int i=0;i<20;i++)
     {
         char command;
         std::cout << "Press e to record waypoint, s to start" << i << std::endl;
@@ -107,16 +107,23 @@ void UltrasoundCalibration::MainLoop()
     {
         int interval = 100;
         custom_ros_lib_.UpdateJointSeed(shared_variable_ptr_->joint_states);
+
+        target_position = target_pose_array.poses[0];
+        target_position.position.z += 0.05;
+        custom_ros_lib_.CartesianPositionControl(target_position, 5, 0.0);
+
         for(int cnt=0;cnt<target_pose_array.poses.size()/2;cnt++)
         {
             cout << "cnt: " << cnt << endl;
             cout << "approaching... " << cnt << endl;
-            target_position = target_pose_array.poses[cnt*2];
-            target_position.position.z += 0.05;
-            custom_ros_lib_.CartesianPositionControl(target_position, 5, 0.0);
+            // target_position = target_pose_array.poses[cnt*2];
+            // target_position.position.z += 0.05;
+            // custom_ros_lib_.CartesianPositionControl(target_position, 5, 0.0);
 
             target_position = target_pose_array.poses[cnt*2];
+            target_position.orientation = target_pose_array.poses[0].orientation;
             custom_ros_lib_.CartesianPositionControl(target_position, 5, 0.0);
+            // custom_ros_lib_.SwitchController("pos_based_pos_traj_controller", "joint_group_vel_controller");
             for(int i = 0; i<interval; i++)
             {
                 cout << i << endl;
@@ -124,8 +131,16 @@ void UltrasoundCalibration::MainLoop()
                 target_position.position.y = target_pose_array.poses[cnt*2].position.y + (i/double(interval))*(target_pose_array.poses[cnt*2+1].position.y-target_pose_array.poses[cnt*2].position.y);
                 target_position.position.z = target_pose_array.poses[cnt*2].position.z + (i/double(interval))*(target_pose_array.poses[cnt*2+1].position.z-target_pose_array.poses[cnt*2].position.z);
                 
+                Eigen::Affine3d task_frame_pose;
+                auto p = target_position.position;
+                auto r = target_position.orientation;
+                task_frame_pose.setIdentity();
+                task_frame_pose.translate( Eigen::Vector3d(p.x, p.y, p.z) );
+                task_frame_pose.rotate( Eigen::Quaterniond(r.w, r.x, r.y, r.z) );
+                static Eigen::VectorXd expected_wrench(6); expected_wrench << -1,0,0,0,0,0;
                 try
                 {
+                    // force_controller_->StaticPointControl(task_frame_pose, expected_wrench, false);
                     custom_ros_lib_.CartesianPositionControl(target_position, 0.4, 0.0);
                 }
                 catch(const char* msg)
@@ -137,11 +152,13 @@ void UltrasoundCalibration::MainLoop()
                 ros::Duration(0.2).sleep();
             }
 
-            target_position.position.z += 0.05;
-            cout << "lifting... " << cnt << endl;
-            custom_ros_lib_.CartesianPositionControl(target_position, 2, 0.0);
+            // target_position.position.z += 0.05;
+            // cout << "lifting... " << cnt << endl;
+            // custom_ros_lib_.CartesianPositionControl(target_position, 2, 0.0);
         }
         SendEndCommand();
+        custom_ros_lib_.DeactivateController("pos_based_pos_traj_controller");
+        custom_ros_lib_.DeactivateController("joint_group_vel_controller");
         break;
     }
     

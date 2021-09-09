@@ -16,7 +16,9 @@ conda activate base && python BayesianSVR.py
 ```
 #### 配准，导航
 ```
-rosrun ultrasound_robot thyroid_biopsy
+cd /home/kuka/lee_ws
+roslaunch ultrasound_robot thyroid_biopsy.launch
+
 rosrun rqt_reconfigure rqt_reconfigure
 ```
 
@@ -38,7 +40,7 @@ rosrun ultrasound_robot us_image_acquisition
 #### 启动python代码（接收图像和tf，生成.mha）
 ```
 cd /home/kuka/lee_ws/src/ultrasound_robot/src/python
-source activate py36 && python us_image_acquisition.py 2
+conda activate base && python us_image_acquisition.py 2
 ```
 
 

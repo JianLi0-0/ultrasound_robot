@@ -26,6 +26,7 @@ class PoseKalmanFilter
         Eigen::VectorXd GetEstimateState();
         Eigen::Affine3d GetEstimateFromEluerAngle();
         Eigen::VectorXd NextStatePrediction(const double prediction_time);
+        Eigen::VectorXd NextStatePredictionFromObservation(const double prediction_time);
         Eigen::VectorXd FromeMatrixToErrorAxisAngle(const Eigen::Affine3d& transformation_error);
         arma::mat EigenToArma(Eigen::MatrixXd eigen_A) {
             arma::mat arma_B = arma::mat(eigen_A.data(), eigen_A.rows(), eigen_A.cols(), true, true);

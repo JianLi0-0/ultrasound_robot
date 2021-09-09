@@ -95,6 +95,19 @@ Eigen::VectorXd PoseKalmanFilter::NextStatePrediction(const double prediction_ti
     return output;
 }
 
+Eigen::VectorXd PoseKalmanFilter::NextStatePredictionFromObservation(const double prediction_time)
+{
+    Eigen::VectorXd output;
+    auto arma_x_hat = kf_->getEstimate();
+    auto observation = kf_->getOutput();
+    Eigen::VectorXd state(6);
+    Eigen::VectorXd state_dot(6);
+    state << observation(0), observation(1), observation(2), observation(3), observation(4), observation(5);
+    state_dot <<arma_x_hat(6), arma_x_hat(7), arma_x_hat(8), arma_x_hat(9), arma_x_hat(10), arma_x_hat(11);
+    output = state + prediction_time * state_dot;
+    return output;
+}
+
 Eigen::VectorXd PoseKalmanFilter::FromeMatrixToErrorAxisAngle(const Eigen::Affine3d& transformation_error)
 {
     Eigen::AngleAxisd rotation_error(transformation_error.linear());

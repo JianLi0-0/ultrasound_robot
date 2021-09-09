@@ -114,5 +114,5 @@ if __name__ == '__main__':
     # volume = sitk.ReadImage("./dataset/thyroid.mhd")
     # np_img_list, transformation_list = GenerateTestData(volume, 500)
     # SaveImage(np_img_list, transformation_list, "thyroid_sample.mha")
-    volume = sitk.ReadImage("thyroid_sample_raw.mha")
-    MhaFileMeter2Pixel(volume, 46.0/527.0, "thyroid_sample.mha")
+    volume = sitk.ReadImage("thyroid_sample_raw2.mha")
+    MhaFileMeter2Pixel(volume, 46.0/527.0, "thyroid_sample2.mha")

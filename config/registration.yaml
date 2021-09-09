@@ -1,4 +1,5 @@
-initial_pose: [-2.9390299955951136, 4.467770099639893, -2.0377872625934046, -0.9225037733661097, 1.416887879371643, 0.15516576170921326]
+# initial_pose: [-2.9390299955951136, 4.467770099639893, -2.0377872625934046, -0.9225037733661097, 1.416887879371643, 0.15516576170921326]
+initial_pose: [-3.0644028822528284, 4.467327117919922, -2.004805866871969, -0.9280040899859827, 1.648930549621582, 0.02803821861743927]
 frame_id: probe
 
 # Strating point of the ultrasound image
@@ -22,17 +23,27 @@ servo_h: 150
 spacing: 0.0872865 # 46.0/527.0
 volume_resol_reduction: 3
 
-target_tx: 42.2
-target_ty: 7.5
-target_tz: 40
-target_rx: 0.096
-target_ry: 1.1708
-target_rz: 0.0
+# target_tx: 78
+# target_ty: 9.6
+# target_tz: 30
+# target_rx: 0.0
+# target_ry: 0.0
+# target_rz: 0.1
 
-visual_servo_lamda: 0.1
-visual_servo_rotation_lamda: 0.1
+target_tx: 40.6
+target_ty: 9.6
+target_tz: 23
+target_rx: -0.05
+# target_ry: -1.57
+target_ry: 0.2
+target_rz: -0.2
+
+visual_servo_lamda: 0.05
+visual_servo_rotation_lamda: 0.018
 
 test: [0,0.0,0,0,0.05,0]
 
-nm_rel_x_change_tol: 0.001
-nm_rel_obj_change_tol: 0.001
+nm_rel_x_change_tol: 0.0001
+nm_rel_obj_change_tol: 0.0001
+
+kf_pred: 5.0

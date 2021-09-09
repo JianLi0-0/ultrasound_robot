@@ -20,7 +20,7 @@ while not rospy.is_shutdown():
             save_tf_command_publisher.publish("freedrive_mode()")
         else:
             break
-        if time.time()-t0 > 600:
+        if time.time()-t0 > 10:
             # save_tf_command_publisher.publish("end_freedrive_mode()")
             print("10s. Free drive mode Stopped.")
             break

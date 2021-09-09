@@ -84,6 +84,7 @@ if(camera.width!=1920):
 print("camera.width:"+str(camera.width)+"   camera.height:"+str(camera.height))
 cropped = 0
 count = 0
+s_count = 0
 while rospy.is_shutdown() is False:
 # while(1):
     try:
@@ -107,13 +108,21 @@ while rospy.is_shutdown() is False:
             toRedis(r, resized, 'image')
         except CvBridgeError as e:
             print(e)
+        n_sp = (servo_starting_point[0], starting_point[1])
+        s_gray = crop_image(gray, n_sp, size)
+        s_gray = cv2.resize(s_gray, (int(size[1]/reduction), int(size[0]/reduction)), interpolation = cv2.INTER_AREA)
+        
+        keyboard = cv2.waitKey(1) & 0xFF
+        if keyboard == ord('q'):
+            cv2.destroyAllWindows()
+            break
+        if keyboard == ord('s'):
+            s_count = s_count + 1
+            cv2.imwrite(str(s_count)+".png", s_gray)
         
         cv2.rectangle(gray, (servo_starting_point[1], servo_starting_point[0]), (servo_starting_point[1]+servo_size[1]*reduction, servo_starting_point[0]+servo_size[0]*reduction), 255, 2)
         cropped2 = crop_image(gray, starting_point, size)
-        cv2.imshow('servo', np.asarray(cropped2))
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            cv2.destroyAllWindows()
-            break
+        # cv2.imshow('servo', np.asarray(cropped2))
 
     elif mode == 'display':
         cv2.imshow('ultrasound', np.asarray(image))
@@ -127,7 +136,7 @@ while rospy.is_shutdown() is False:
             # volume = sitk.ReadImage("./dataset/thyroid.mhd")
             # trash, transformation_list = UltrasoundProcess.GenerateTestData(volume, count)
             if len(np_img_list) == len(transformation_list):
-                UltrasoundProcess.SaveImage(np_img_list, transformation_list, "thyroid_sample_raw.mha")
+                UltrasoundProcess.SaveImage(np_img_list, transformation_list, "thyroid_sample_raw2.mha")
             else:
                 print("Error: len(np_img_list) != len(transformation_list)!")
             break
