@@ -1,8 +1,10 @@
 # left
-initial_pose: [-2.0377872625934046, 4.467770099639893, -2.9390299955951136, -0.9225037733661097, 1.416887879371643, 0.15516576170921326] # left
+# initial_pose: [-2.0377872625934046, 4.467770099639893, -2.9390299955951136, -0.9225037733661097, 1.416887879371643, 0.15516576170921326] # left
 # initial_pose: [-2.0243237654315394, 4.47627592086792, -3.0365145842181605, -0.8680308500873011, 1.554169774055481, -1.5017364660846155]
 # right
 # initial_pose: [-2.0050700346576136, 4.467793941497803, -3.06240159669985, -0.9283998648272913, 1.6358853578567505, 0.030041830614209175] # right
+# navigation
+initial_pose: [-1.9354537169085901, 4.399077415466309, -2.9986544291125696, -0.9472125212298792, 1.4134941101074219, -1.4679182211505335]
 frame_id: probe
 
 # Strating point of the ultrasound image
@@ -46,7 +48,20 @@ volume_resol_reduction: 3
 # target_ry: 1.57
 # target_rz: 0.0
 
-# # for half phantom
+# for half phantom navigation
+target_tx: 26.2
+target_ty: 10.3
+target_tz: 40.5
+target_rx: 0.2
+target_ry: 1.57
+target_rz: -0.05
+visual_servo_lamda: 0.09
+visual_servo_rotation_lamda: 0.04
+nm_rel_x_change_tol: 0.001
+nm_rel_obj_change_tol: 0.001
+
+
+# # for demo2; use new_biopsy_single.mha
 # target_tx: 42.0
 # target_ty: 10.3
 # target_tz: 23.5
@@ -58,18 +73,18 @@ volume_resol_reduction: 3
 # nm_rel_x_change_tol: 0.001
 # nm_rel_obj_change_tol: 0.001
 
-# for demo
-target_tx: 10.5
-target_ty: 7.6
-target_tz: 40.2
-target_rx: 0.09
-target_ry: 0.9
-target_rz: 0.0
-# for demo
-visual_servo_lamda: 0.1
-visual_servo_rotation_lamda: 0.1
-nm_rel_x_change_tol: 0.001
-nm_rel_obj_change_tol: 0.001
+# # for demo; use new_biopsy_single_enlarged.mha
+# target_tx: 10.5
+# target_ty: 7.6
+# target_tz: 40.2
+# target_rx: 0.09
+# target_ry: 0.9
+# target_rz: 0.0
+# # for demo
+# visual_servo_lamda: 0.1
+# visual_servo_rotation_lamda: 0.1
+# nm_rel_x_change_tol: 0.00001
+# nm_rel_obj_change_tol: 0.00001
 
 test: [0,0.0,0,0,0.05,0]
 

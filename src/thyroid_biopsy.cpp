@@ -166,7 +166,7 @@ void ThyroidBiopsy::RegistrationInitialization()
 
     using ReaderType = itk::ImageFileReader<VolumeType>;
     ReaderType::Pointer reader = ReaderType::New();
-    reader->SetFileName("/home/kuka/lee_ws/src/ultrasound_robot/src/python/new_biopsy_single.mha");
+    reader->SetFileName("/home/kuka/lee_ws/src/ultrasound_robot/src/python/new_biopsy_single_enlarged.mha");
     reader->Update();
     volume_ = reader->GetOutput();
     volume_ = ScaleVolume(volume_, transformation_, volume_resol_reduction_);
