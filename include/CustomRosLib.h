@@ -41,6 +41,7 @@ class CustomRosLib
         void BroadcastTransform(string parent_frame, string child_frame, geometry_msgs::PoseStamped transformation);
         void BroadcastTransform(string parent_frame, string child_frame, Eigen::Affine3d transformation);
         void WrenchRvizDisplay(Eigen::VectorXd vel, string frame_name, double sacle);
+        Eigen::Affine3d ListenToTransform_Eigen(string base_frame, string target_frame);
 
     private:
         ros::NodeHandle nh_;

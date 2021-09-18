@@ -130,6 +130,20 @@ tf::StampedTransform CustomRosLib::ListenToTransform_TF(string base_frame, strin
     return transform;
 }
 
+Eigen::Affine3d CustomRosLib::ListenToTransform_Eigen(string base_frame, string target_frame)
+{    
+    tf::StampedTransform transform;
+    static tf::TransformListener listener(ros::Duration(5));
+    listener.waitForTransform(base_frame, target_frame, ros::Time(0), ros::Duration(3.0));
+    listener.lookupTransform(base_frame, target_frame, ros::Time(0), transform);
+
+    Eigen::Affine3d output;
+    output.setIdentity();
+    output.translate( Eigen::Vector3d(transform.getOrigin()) );
+    output.rotate( Eigen::AngleAxisd(transform.getRotation().getAngle(), Eigen::Vector3d(transform.getRotation().getAxis())) );
+    return output;
+}
+
 void CustomRosLib::UpdateJointSeed(Eigen::VectorXd joint_states)
 {
     last_computed_angle_.data[0] = joint_states[0];

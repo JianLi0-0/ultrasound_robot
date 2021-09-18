@@ -121,8 +121,10 @@ Eigen::VectorXd ForceTorqueController::ForceVelocityController(const Eigen::Affi
     const Eigen::VectorXd velocity_task_frame = wrench_scaling_*wrench_error - stiffness_*pose_error;
 
     // transform the velocity from task frame to the base frame: V_b = inv(Adjoint_tb) * V_t
-    const Eigen::VectorXd velocity_base_frame = AdjointTransformationMatrix(task_frame_2_base.inverse()) * velocity_task_frame;
+    const Eigen::VectorXd velocity_end_effector_frame = AdjointTransformationMatrix(task_frame_2_end_effector.inverse()) * velocity_task_frame;
     // const Eigen::VectorXd velocity_joint_space = jacobian.inverse() * velocity_base_frame;
+
+    Eigen::VectorXd velocity_base_frame = AdjointNoTranslation(base_2_end_effector) * velocity_end_effector_frame;
 
     // return velocity_joint_space;
     return velocity_base_frame;
@@ -202,6 +204,18 @@ Eigen::MatrixXd ForceTorqueController::AdjointTransformationMatrix(const Eigen::
     Eigen::MatrixXd adjoint_tf(6, 6);
     adjoint_tf.block(0,0,3,3) = rotation;
     adjoint_tf.block(0,3,3,3) = SkewSymmetricMatrix(translation) * rotation;
+    adjoint_tf.block(3,0,3,3) = Eigen::Matrix3d::Zero(3,3);
+    adjoint_tf.block(3,3,3,3) = rotation;
+    return adjoint_tf;
+}
+
+Eigen::MatrixXd ForceTorqueController::AdjointNoTranslation(const Eigen::Affine3d& transformation)
+{
+    const auto rotation = transformation.rotation();
+    const auto translation = transformation.translation();
+    Eigen::MatrixXd adjoint_tf(6, 6);
+    adjoint_tf.block(0,0,3,3) = rotation;
+    adjoint_tf.block(0,3,3,3) = Eigen::Matrix3d::Zero(3,3);
     adjoint_tf.block(3,0,3,3) = Eigen::Matrix3d::Zero(3,3);
     adjoint_tf.block(3,3,3,3) = rotation;
     return adjoint_tf;

@@ -45,11 +45,13 @@ class ThyroidBiopsy
         ros::Publisher frequecy_pub_;
 
         TransformType::Pointer transformation_;
+        TransformType::Pointer target_transformation_;
         Optimization optimization_;
         VolumeType::Pointer volume_;
         VolumeType::SpacingType spacing_;
         float slice_width_;
         float slice_height_;
+        Eigen::Affine3d target_world_;
         Eigen::Affine3d target_slice_pose_;
         Eigen::Affine3d current_slice_pose_;
         Eigen::Affine3d probe_to_target_;
@@ -62,13 +64,16 @@ class ThyroidBiopsy
         bool kf_regist_pred_ = false;
         double kf_pred_ = 0.5;
         bool record_tracking_error_ = false;
+        bool save_the_world = true;
+        bool reset_starting_point = false;
 
         sensor_msgs::Image us_image_;
         VolumeType::Pointer probe_itk_us_image_, itk_us_image_,taget_slice_;
         bool is_registration_successful_ = false;
+        bool is_robot_initializated_ = false;
         std::thread cv_thread_;
         Eigen::VectorXd transformation_x0_;
-        itk::Vector<double, 3> t_; 
+        itk::Vector<double, 3> t_, r_; 
         double volume_resol_reduction_ = 1;
         double elasped_time_ = 1;
         double nm_rel_x_change_tol_ = 0;
@@ -80,6 +85,9 @@ class ThyroidBiopsy
 
         ros::Subscriber aruco_marker_sub_;
 		geometry_msgs::PoseStamped marker_pose_;
+
+        std::thread recording_thread_;
+
 
     public:
         
@@ -100,11 +108,14 @@ class ThyroidBiopsy
         Eigen::Affine3d MmToM(Eigen::Affine3d tf);
         void BayesianSVR();
         void ArucoMarkerCallback(const geometry_msgs::PoseStamped::ConstPtr msg);
+        Eigen::Affine3d StoreTargetWorld();
+        void Recording();
 };
 
 ThyroidBiopsy::ThyroidBiopsy(std::shared_ptr<SharedVariable> ptr, const pt::ptree config_tree):
 control_thread_(&ThyroidBiopsy::ControlLoop, this),
-cv_thread_(&ThyroidBiopsy::DisplayComparisonLoop, this)
+cv_thread_(&ThyroidBiopsy::DisplayComparisonLoop, this),
+recording_thread_(&ThyroidBiopsy::Recording, this)
 {
     shared_variable_ptr_ = ptr;
     config_tree_ = config_tree;
@@ -122,6 +133,7 @@ cv_thread_(&ThyroidBiopsy::DisplayComparisonLoop, this)
     nh_.getParam("/svr/servo_h", slice_height_);
     nh_.getParam("/svr/volume_resol_reduction", volume_resol_reduction_);
     nh_.getParam("/svr/initial_pose", initial_joint_angle_);
+    auto temp = initial_joint_angle_[0];initial_joint_angle_[0]=initial_joint_angle_[2];initial_joint_angle_[2]=temp;
     nh_.getParam("/svr/nm_rel_x_change_tol", nm_rel_x_change_tol_);
     nh_.getParam("/svr/nm_rel_obj_change_tol", nm_rel_obj_change_tol_);
     cout << "nm_rel_x_change_tol_: " << nm_rel_x_change_tol_ << " nm_rel_obj_change_tol: " << nm_rel_obj_change_tol_ << endl;
@@ -154,7 +166,7 @@ void ThyroidBiopsy::RegistrationInitialization()
 
     using ReaderType = itk::ImageFileReader<VolumeType>;
     ReaderType::Pointer reader = ReaderType::New();
-    reader->SetFileName("/home/kuka/lee_ws/src/ultrasound_robot/src/python/new_biopsy.mha");
+    reader->SetFileName("/home/kuka/lee_ws/src/ultrasound_robot/src/python/new_biopsy_single.mha");
     reader->Update();
     volume_ = reader->GetOutput();
     volume_ = ScaleVolume(volume_, transformation_, volume_resol_reduction_);
@@ -186,6 +198,7 @@ void ThyroidBiopsy::RegistrationInitialization()
     nh_.getParam("/svr/target_rx", r[0]); nh_.getParam("/svr/target_ry", r[1]); nh_.getParam("/svr/target_rz", r[2]);
     transformation_->SetTranslation(t_);
     transformation_->SetRotation(r[0], r[1], r[2]);
+    target_transformation_ = transformation_;
     taget_slice_ = ExtractSliceFromVolume(volume_, transformation_, slice_width_, slice_height_, spacing_);
     SaveImage(taget_slice_, "target_slice.png");
     target_slice_pose_ = pkf_.Position_Eluer_Angle_To_Affine3d( optimization_.ITKTransformToEigen(transformation_) );
@@ -198,12 +211,16 @@ void ThyroidBiopsy::RobotInitialization()
     custom_ros_lib_->JointPositionControl(initial_joint_angle_, 3.0);
     custom_ros_lib_->SwitchController("pos_based_pos_traj_controller", "joint_group_vel_controller");
     force_controller_->UpdateZeroWrench();
-    force_controller_->Approach(-0.7, 0.005);
+    force_controller_->Approach(-1, 0.005);
     // ros::Duration(1.0).sleep();
 }
 
 void ThyroidBiopsy::BayesianSVR()
 {
+    bool bayesian = false;
+    nh_.getParam("/svr/bayesian", bayesian);
+    if(!bayesian) return ;
+
     ultrasound_robot::bayesian_svr srv;
     srv.request.command = false;
     cout << "Calling service BayesianSVR ..." << endl;
@@ -225,9 +242,10 @@ void ThyroidBiopsy::MainLoop()
 {
     RobotInitialization();
     RegistrationInitialization();
+    is_robot_initializated_ = true;
     BayesianSVR();
-    ofstream OutFile("/home/kuka/lee_ws/src/ultrasound_robot/data/pose.txt");
-    OutFile << "p_x " << "p_y " << "p_z " << "p_a " << "p_b " << "p_c " << "r_x " << "r_y " << "r_z " << "r_a " << "r_b " << "r_c" << endl;
+    // ofstream OutFile("/home/kuka/lee_ws/src/ultrasound_robot/data/pose.txt");
+    // OutFile << "p_x " << "p_y " << "p_z " << "p_a " << "p_b " << "p_c " << "r_x " << "r_y " << "r_z " << "r_a " << "r_b " << "r_c" << endl;
     auto timer = CustomTimer();
     auto timer2 = CustomTimer();
 
@@ -249,8 +267,8 @@ void ThyroidBiopsy::MainLoop()
 
         timer.tic();
         Eigen::VectorXd x0 = transformation_x0_;
-
-        if(kf_regist_pred_) x0 = pkf_.NextStatePredictionFromObservation( (ros::Time::now() - registration_time_stamp_).toSec() * kf_pred_ );
+        // if(reset_starting_point) {x0 =  optimization_.ITKTransformToEigen(target_transformation_); reset_starting_point = false;}
+        // if(kf_regist_pred_) x0 = pkf_.NextStatePredictionFromObservation( (ros::Time::now() - registration_time_stamp_).toSec() * kf_pred_ );
         registration_time_stamp_ = ros::Time::now();
 
         auto success = optimization_.Optimize(itk_us_image_, x0, nm_rel_x_change_tol_, nm_rel_obj_change_tol_);
@@ -271,21 +289,85 @@ void ThyroidBiopsy::MainLoop()
     cv_thread_.join();
 }
 
+#include <dirent.h>
+void getFiles(string path,vector<string>& filenames)
+{
+    DIR *pDir;
+    struct dirent* ptr;
+    if(!(pDir = opendir(path.c_str()))){
+        cout<<"Folder doesn't Exist!"<<endl;
+        return;
+    }
+    while((ptr = readdir(pDir))!=0) {
+        if (strcmp(ptr->d_name, ".") != 0 && strcmp(ptr->d_name, "..") != 0){
+            filenames.push_back(path + "/" + ptr->d_name);
+    }
+    }
+    closedir(pDir);
+}
+
+void ThyroidBiopsy::Recording()
+{
+    ros::Rate rate1(200);
+    while(ros::ok() && is_registration_successful_ == false) {rate1.sleep();};
+    ros::Rate rate(0.3);
+    bool recording = false;
+    string folder;
+    nh_.getParam("/svr/recording", recording);
+    nh_.getParam("/svr/recording_folder", folder);
+    while(ros::ok())
+    {
+        if(!recording) break;
+        vector<string> files;
+        
+        getFiles(folder, files);
+        string num = std::to_string(files.size()+1);
+        string file_name = folder + "/" + num + ".png";
+        SaveImage(probe_itk_us_image_, file_name);
+        rate.sleep();
+        if(end_control_) break;
+    }
+
+}
+
 void ThyroidBiopsy::ArucoMarkerCallback(const geometry_msgs::PoseStamped::ConstPtr msg)
 {
-    static ofstream OutFile("/home/kuka/lee_ws/src/ultrasound_robot/data/tracking_error.txt");
+    static ofstream OutFile_v("/home/kuka/lee_ws/src/ultrasound_robot/data/tracking_error_virtual.txt");
+    static ofstream OutFile_r("/home/kuka/lee_ws/src/ultrasound_robot/data/tracking_error_real.txt");
+    static Eigen::Affine3d probe_to_marker;
     if(record_tracking_error_)
     {
         if(end_control_) {record_tracking_error_=false;}
-        marker_pose_.header = msg->header;
-        marker_pose_.pose = msg->pose;
-        auto p = marker_pose_.pose.position;
-        auto r = marker_pose_.pose.orientation;
+        auto actual_marker = custom_ros_lib_->ListenToTransform("base_link", "aruco_marker_frame");
+        geometry_msgs::Point p = actual_marker.position;
+        geometry_msgs::Quaternion r = actual_marker.orientation;
         double roll, pitch, yaw;
         tf::Matrix3x3(tf::Quaternion(r.x, r.y, r.z, r.w)).getRPY(roll, pitch, yaw);
-        OutFile << p.x << " " << p.y << " " << p.z << " " << roll << " " << pitch << " " << yaw << " "  << endl;
-    }
+        OutFile_r << p.x << " " << p.y << " " << p.z << " " << roll << " " << pitch << " " << yaw << endl;
 
+        Eigen::Affine3d probe_world = custom_ros_lib_->ListenToTransform_Eigen("base_link", "probe");
+        Eigen::Affine3d virtual_marker = probe_world * probe_to_marker;
+        auto pp = virtual_marker.translation();
+        Eigen::Quaterniond q(virtual_marker.rotation());
+        tf::Matrix3x3(tf::Quaternion(q.x(), q.y(), q.z(), q.w())).getRPY(roll, pitch, yaw);
+        OutFile_v << pp(0) << " " << pp(1) << " " << pp(2) << " " << roll << " " << pitch << " " << yaw << endl;
+    }
+    else{
+        marker_pose_.header = msg->header;
+        marker_pose_.pose = msg->pose;
+        probe_to_marker = custom_ros_lib_->ListenToTransform_Eigen("probe", "aruco_marker_frame");
+    }
+}
+
+Eigen::Affine3d ThyroidBiopsy::StoreTargetWorld()
+{
+        // Eigen::Affine3d current_slice_pose = pkf_.Position_Eluer_Angle_To_Affine3d(pkf_.NextStatePrediction(0));
+        // Eigen::Affine3d probe_to_target = current_slice_pose.inverse() * target_slice_pose_;
+        // Eigen::Affine3d probe_world = custom_ros_lib_->ListenToTransform_Eigen("base_link", "probe");
+        // Eigen::Affine3d output = probe_world * MmToM(probe_to_target);
+        Eigen::Affine3d output = custom_ros_lib_->ListenToTransform_Eigen("base_link", "target_world");
+        cout << "StoreTargetWorld(): " << endl << output.matrix() << endl;
+        return output;
 }
 
 void ThyroidBiopsy::ControlLoop()
@@ -294,18 +376,39 @@ void ThyroidBiopsy::ControlLoop()
     WrenchRvizDisplay rivz_ft("/vel_ft");
 
     ros::Rate rate(200);
-    while(ros::ok() && is_registration_successful_ == false) {rate.sleep();};
+    while(ros::ok() && is_robot_initializated_ == false) {rate.sleep();};
     std::cout << "Start control loop." << std::endl;
+
+    nh_.getParam("/svr/save_the_world", save_the_world);
+    if(save_the_world)
+    {
+        ros::Duration(1.0).sleep();
+        target_world_ =  StoreTargetWorld();
+    }
     while(ros::ok())
     {
         auto time_interval = ros::Time::now() - registration_time_stamp_;
         auto current_slice_pose = pkf_.Position_Eluer_Angle_To_Affine3d(pkf_.NextStatePrediction( time_interval.toSec() ));
         // auto current_slice_pose = pkf_.GetEstimateFromEluerAngle();
-        auto probe_to_target = current_slice_pose.inverse() * target_slice_pose_;
-		auto velocity_base_visual_servo_ = visual_servo_->PBVS_TR(MmToM(probe_to_target), Eigen::Affine3d::Identity());
+        auto probe_to_target = MmToM(current_slice_pose.inverse() * target_slice_pose_);
+        if(save_the_world)
+        {
+            double translation_threshold;
+            nh_.getParam("/svr/translation_threshold", translation_threshold);
+            // cout << "probe_to_target.translation().norm()" << probe_to_target.translation().norm() << endl;
+            auto probe_world = custom_ros_lib_->ListenToTransform_Eigen("base_link", "probe");
+            probe_to_target = probe_world.inverse() * target_world_;
+            if (probe_to_target.translation().norm() < translation_threshold) 
+            {
+                reset_starting_point = true;
+                save_the_world=false;
+                std::cout << "start tracking." << std::endl;
+            }
+        }
+		auto velocity_base_visual_servo_ = visual_servo_->PBVS_TR(probe_to_target, Eigen::Affine3d::Identity());
 		auto velocity_base_frame_ft_ = force_controller_->ForceVelocityController(force_controller_->get_base_2_end_effector(), expected_wrench_);
         
-        custom_ros_lib_->BroadcastTransform("probe", "target_slice", MmToM(probe_to_target));
+        custom_ros_lib_->BroadcastTransform("probe", "target_slice", probe_to_target);
         rivz_visual_sevo.Display(velocity_base_visual_servo_, "base_link", 10);
         rivz_ft.Display(velocity_base_frame_ft_, "base_link", 10);
 
@@ -320,7 +423,7 @@ void ThyroidBiopsy::ControlLoop()
 
         if(start_navigation_)
         {
-            static ofstream OutFile("/home/kuka/lee_ws/src/ultrasound_robot/data/fearture_errors.txt");
+            static ofstream OutFile("/home/kuka/lee_ws/src/ultrasound_robot/data/feature_errors.txt");
             double roll, pitch, yaw;
             auto error = pkf_.FromeMatrixToErrorAxisAngle(probe_to_target);
             OutFile << error(0) << " " << error(1) << " " << error(2) << " " << error(3) << " " << error(4) << " " << error(5) << " "  << endl;
@@ -356,12 +459,13 @@ void ThyroidBiopsy::DisplayComparisonLoop()
                 end_control_ = true;
             }
             else if(key == 'a') start_navigation_ = true;
-            else if(key == 't') visual_servo_->set_lambda(visual_servo_->get_lambda() + 0.05);
-            else if(key == 'r') visual_servo_->set_rotation_lambda(visual_servo_->get_rotation_lambda() + 0.01);
-            else if(key == 'k') {kf_regist_pred_ = !kf_regist_pred_;  cout << "kf_prediction:" << kf_regist_pred_ << endl;}
-            else if(key == 'z') 
+            // else if(key == 't') visual_servo_->set_lambda(visual_servo_->get_lambda() + 0.05);
+            // else if(key == 'r') visual_servo_->set_rotation_lambda(visual_servo_->get_rotation_lambda() + 0.01);
+            // else if(key == 'k') {kf_regist_pred_ = !kf_regist_pred_;  cout << "kf_prediction:" << kf_regist_pred_ << endl;}
+            else if(key == 't') 
             {
-                record_tracking_error_ = true; 
+                record_tracking_error_ = true;
+                target_slice_pose_ = pkf_.Position_Eluer_Angle_To_Affine3d( transformation_x0_ ); 
                 cout << "record_tracking_error !" << endl;
                 // visual_servo_->set_lambda(visual_servo_->get_lambda() + 0.2);
                 // visual_servo_->set_rotation_lambda(visual_servo_->get_rotation_lambda() + 0.1);

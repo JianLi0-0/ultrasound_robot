@@ -3,3 +3,4 @@ src/python/__pycache__
 src/python/*.mha
 src/python/*.mhd
 include/svr/optim/.DS_Store
+data

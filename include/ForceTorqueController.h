@@ -54,6 +54,7 @@ class ForceTorqueController
 
         Eigen::VectorXd FromeMatrixToErrorAxisAngle(const Eigen::Affine3d& transformation_error);
         Eigen::MatrixXd AdjointTransformationMatrix(const Eigen::Affine3d& transformation);
+        Eigen::MatrixXd AdjointNoTranslation(const Eigen::Affine3d& transformation);
         Eigen::Matrix3d SkewSymmetricMatrix(const Eigen::Vector3d& vector);
         Eigen::VectorXd WrenchTruncation(Eigen::VectorXd original_wrench, double force_threshold, double torque_threshold);
         Eigen::VectorXd PoseErrorEpsilon(Eigen::VectorXd original_vector, double position_threshold, double orientation_threshold);

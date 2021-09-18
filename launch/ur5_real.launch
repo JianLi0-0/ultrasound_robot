@@ -28,5 +28,6 @@
   <!--x y z qx qy qz qw--> 
   <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0.195 0.0 0.0 -1.5707963267949 0.0 0.0 ee_link probe 100" />  
   <node pkg="tf" type="static_transform_publisher" name="link2_broadcaster" args="0.0458036022471 0.03435292326 0.0476811881427 -0.00686598409723  -0.0142866477801 -0.00905284984403 0.999833384053 ee_link camera_link 100" />
+  <!-- <node pkg="tf" type="static_transform_publisher" name="link3_broadcaster" args="0.50145 -0.11434 -0.041458 -0.028361 0.74546 -0.66426 0.047292 base_link target_world 100" /> -->
   <!-- <include file="$(find ultrasound_robot)/launch/aruco_single_marker.launch" /> -->
 </launch>
